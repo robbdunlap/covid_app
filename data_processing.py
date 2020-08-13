@@ -1,32 +1,13 @@
 import pandas as pd
 from datetime import datetime, timedelta
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> Too many changes for a pithy title
 import matplotlib.pyplot as plt
 from math import isnan
 from scipy.stats import linregress
 import numpy as np
-<<<<<<< HEAD
 
 ###### remove extraneous data from the CDC Excess Deaths data set and add the mid-point of excess deaths estimate ######
 
 # Import CDC excess deaths data from file
-=======
-=======
->>>>>>> Too many changes for a pithy title
-
-###### remove extraneous data from the CDC Excess Deaths data set and add the mid-point of excess deaths estimate ######
-
-<<<<<<< HEAD
-###### remove extraneous data from the CDC Excess Deaths data set ######
-
-# Import deaths from file
->>>>>>> So many changes - totally new design
-=======
-# Import CDC excess deaths data from file
->>>>>>> Too many changes for a pithy title
 xs_deaths = pd.read_csv("data/xs_deaths.csv")
 
 # The CDC data has three entries for each state for each week. These represent whether they are Type "Predicted(weighted)" or "Unweighted" and Outcome "All causes"
@@ -50,15 +31,7 @@ xs_deaths.drop(indexNames , inplace=True)
 xs_deaths_2020 = xs_deaths[(xs_deaths['Week Ending Date'] > '2020-01-21')].copy()
 del xs_deaths
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 # drop the unnecessary columns 
-=======
-# drop the unnecessary rows 
->>>>>>> So many changes - totally new design
-=======
-# drop the unnecessary columns 
->>>>>>> Too many changes for a pithy title
 xs_deaths_2020 = xs_deaths_2020.drop(xs_deaths_2020.columns[[2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16]], axis=1)
 
 # add the average of the upper and lower xs deaths to the df
@@ -94,20 +67,9 @@ del xs_deaths_2020_ny['index']
 
 ###### end/remove extraneous data from the CDC Excess Deaths data set ######
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 
 ###### munge JHU data, remove extraneous data, and add 7-day rolling averages ######
-=======
-###### processing JHU data ######
->>>>>>> So many changes - totally new design
-=======
-
-
-
-###### munge JHU data, remove extraneous data, and add 7-day rolling averages ######
->>>>>>> Too many changes for a pithy title
 
 # import data files
 new_cases = pd.read_csv("data/jhu_confirmed_daily.csv")
@@ -193,21 +155,11 @@ combined_daily_cases_deaths.drop(combined_daily_cases_deaths.loc[combined_daily_
 # save the processed data as a csv (for use by other applications such as the Streamlit webapp)
 combined_daily_cases_deaths.to_csv("data/daily_cases_deaths.csv", index=False)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> Too many changes for a pithy title
 ###### end/munge JHU data, remove extraneous data, and add 7-day rolling averages ######
 
 
 
 
-<<<<<<< HEAD
-=======
-###### end/processing JHU data ######
->>>>>>> So many changes - totally new design
-=======
->>>>>>> Too many changes for a pithy title
 
 ###### create a table of the JHU data summed into weekly values instead of daily and merge with CDC excess deaths data ######
 
@@ -221,8 +173,6 @@ daily_cases_deaths.rename(columns={"Province_State": "state", "Date": "date", "n
 # sum the weekly cases, match the week starting date to the one used by the CDC
 weekly_cases_deaths = daily_cases_deaths.groupby('state').resample('W-SAT', on='date').sum()
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 # reset the index so 'date' is a column
 weekly_cases_deaths.reset_index(inplace=True)
 
@@ -231,24 +181,6 @@ weekly_cases_deaths.reset_index(inplace=True)
 latest_date_of_jhu_data = daily_cases_deaths['date'].max()
 
 # delete the lastest week if it's not a complete week
-=======
-# delete the lastest week if it's not a complete week
-latest_date_of_jhu_data = daily_cases_deaths['date'].max()
-
-# reset the index so 'date' is a column
-weekly_cases_deaths.reset_index(inplace=True)
-
->>>>>>> So many changes - totally new design
-=======
-# reset the index so 'date' is a column
-weekly_cases_deaths.reset_index(inplace=True)
-
-# get latest date of JHU data to display for user to know that the data is fresh and for 
-# trimming latest week if it's not a complete week
-latest_date_of_jhu_data = daily_cases_deaths['date'].max()
-
-# delete the lastest week if it's not a complete week
->>>>>>> Too many changes for a pithy title
 if latest_date_of_jhu_data.weekday() != 5:
     latest_date_of_weekly_cases_deaths = weekly_cases_deaths['date'].max()
     weekly_cases_deaths = weekly_cases_deaths[weekly_cases_deaths.date != latest_date_of_weekly_cases_deaths]
@@ -281,27 +213,12 @@ latest_weeks_xs_deaths_avg['data_from_dates_up_to'] = latest_date_of_cdc_data
 # reset the index
 latest_weeks_xs_deaths_avg.reset_index(inplace=True)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 ###### end/get the average of the last 4 values mid_point_xs_deaths ######
 
 
 
 
 ###### calculating estimated actual deaths per day from CDC xs deaths and JHU reported deaths data ######
-=======
-###### end/create a table of the JHU data summed into weekly values instead of daily and merge with CDC excess deaths data ######
-
-###### calculating estimated actual deaths per day from CDC xs deaths  and JHU reported deaths data ######
->>>>>>> So many changes - totally new design
-=======
-###### end/get the average of the last 4 values mid_point_xs_deaths ######
-
-
-
-
-###### calculating estimated actual deaths per day from CDC xs deaths and JHU reported deaths data ######
->>>>>>> Too many changes for a pithy title
 
 # create a dictionary of the mid_point_xs_deaths to make calculation quicker in the df
 state_xs_deaths_dict = latest_weeks_xs_deaths_avg.set_index('state').to_dict()['mid_point_xs_deaths']
@@ -317,20 +234,9 @@ state_xs_deaths_dict = latest_weeks_xs_deaths_avg.set_index('state').to_dict()['
 #         corrected_value = row.fillna(0)['new_deaths_jhu'] + state_xs_deaths_dict[row['state']]
 #     return corrected_value
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 # the new-improved version that doesn't estimate excess deaths for when a state has less than
 # 6 deaths that week. Instead, it just uses the JHU reported deaths value and doesn't make a
 # correction.
-=======
-# the new-improved version that doesn't estimate excess deaths for states that have less than
-# 6 deaths per week
->>>>>>> So many changes - totally new design
-=======
-# the new-improved version that doesn't estimate excess deaths for when a state has less than
-# 6 deaths that week. Instead, it just uses the JHU reported deaths value and doesn't make a
-# correction.
->>>>>>> Too many changes for a pithy title
 def est_deaths(row):
     if row['new_deaths_jhu'] < 6:
         corrected_value = row.fillna(0)['new_deaths_jhu']
@@ -346,20 +252,10 @@ weekly_cases_deaths_xs['corr_new_deaths'] = weekly_cases_deaths_xs.apply(est_dea
 # save the data as a csv for the other modules
 weekly_cases_deaths_xs.to_csv("data/weekly_cases_deaths_xs.csv", index=False)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> Too many changes for a pithy title
 ###### end/calculating estimated actual deaths per day from CDC xs deaths and JHU reported deaths data ######
 
 
 
-<<<<<<< HEAD
-=======
-###### end/calculating estimated actual deaths per day from CDC xs deaths  and JHU reported deaths data ######
->>>>>>> So many changes - totally new design
-=======
->>>>>>> Too many changes for a pithy title
 
 ###### add the estimated infections that occured 2 weeks previous to the date of the corrected deaths ######
 
@@ -391,10 +287,6 @@ weekly_est_cases_deaths = weekly_cases_deaths_xs.merge(est_infections,
 # save as csv for use by other modules
 weekly_est_cases_deaths.to_csv('data/weekly_est_cases_deaths.csv', index=False)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> Too many changes for a pithy title
 ###### end/add the estimated infections that occured 2 weeks previous to the date of the corrected deaths ######
 
 
@@ -751,9 +643,3 @@ weekly_est_cases_deaths["psi"] = weekly_est_cases_deaths.apply(add_psi, axis=1)
 
 ###### end/calculating PPE/Hand-Hygiene Index (Psi) ######
 
-<<<<<<< HEAD
-=======
-###### end/add the estimated infections that occured 2 weeks previous to the date of the corrected deaths ######
->>>>>>> So many changes - totally new design
-=======
->>>>>>> Too many changes for a pithy title
