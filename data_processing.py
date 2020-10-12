@@ -350,7 +350,7 @@ print(percent_pop_infected)
 # since I'm summing up infections by week. I could still maintain a count of infections by 
 # day but I don't think it would be that much of a change relative to just using the count
 # of the people infected in the previous week as the number of people in an infectious 
-# state - it should be a good enough approximation for a machine learning approach.
+# state - I think it's a reasonable approximation for a machine learning approach.
 
 
 # formula to sum up all the people who were infected between 4-10 days previous to the 
@@ -437,7 +437,7 @@ state_densities.sort_values(by=['state_density'], inplace=True)
 # compress the ln scale of state densities between 0 and 1.
 # rho is the normalized avg_city_density index between 0 and 1 (1 being set by the most dense state)
 highest_density = state_densities.nlargest(1, 'log_state_density')
-state_densities['propotionate_log_density'] = state_densities['log_state_density'] / highest_density.values[0][2]
+state_densities['proportionate_log_density'] = state_densities['log_state_density'] / highest_density.values[0][2]
 state_densities.reset_index(drop=True, inplace=True)
 
 ###### end/estimating population density in states ######
@@ -453,3 +453,268 @@ def state_id(row):
     return state_id.values[0]
 
 weekly_est_cases_deaths['state_id'] =  weekly_est_cases_deaths.apply(state_id, axis=1)
+
+# add proportionate (b/w 0 and 1) log density for each state
+def add_rho(row):
+    state = row['state']
+    rho = state_densities[state_densities['state'] == state]['proportionate_log_density']
+    return rho.values[0]
+
+weekly_est_cases_deaths['rho'] =  weekly_est_cases_deaths.apply(add_rho, axis=1)
+
+############ create exposure index using google mobility data ###################
+mobility_data = pd.read_csv("data/Global_Mobility_Report.csv")
+
+# drop non-US data
+mobility_data.drop(mobility_data.loc[mobility_data['country_region_code'] != "US"].index, inplace=True)
+
+# drop county data, only using state level data for this analysis
+mobility_data = mobility_data[mobility_data['sub_region_2'].isna()]
+
+# drop other unnecessary columns
+mobility_data.drop(['country_region_code','country_region','iso_3166_2_code','census_fips_code','metro_area','sub_region_2'], axis=1, inplace=True)
+
+# convert date column to datetime formate
+mobility_data['date'] = pd.to_datetime(mobility_data['date'])
+
+# there are values that are "US" but don't have a sub_region_1 - they're probably all US - drop these
+mobility_data.dropna(subset=['sub_region_1'], inplace=True)
+
+mob_data_for_plotting = mobility_data.iloc[:,0:8]
+
+mob_data_for_plotting.rename(columns={'retail_and_recreation_percent_change_from_baseline':'retail_pcfb',
+                     'grocery_and_pharmacy_percent_change_from_baseline':'groc_pcfb',
+                     'parks_percent_change_from_baseline':'parks_pcfb',
+                     'transit_stations_percent_change_from_baseline':'transit_pcfb',
+                     'workplaces_percent_change_from_baseline':'work_pcfb',
+                     'residential_percent_change_from_baseline':'res_pcfb'}, inplace=True)
+
+mob_data_for_plotting.head(1)
+
+# count the number of nan values in the mobility data
+count_nan_mob_data_for_plotting = pd.DataFrame(mob_data_for_plotting[['retail_pcfb',
+              'groc_pcfb',
+              'parks_pcfb',
+              'transit_pcfb',
+              'work_pcfb',
+              'res_pcfb']
+             ].isnull().groupby(mob_data_for_plotting['sub_region_1']).sum())
+
+# get rid of the decimals by converting to int
+count_nan_mob_data_for_plotting = count_nan_mob_data_for_plotting.iloc[:,0:6].astype(dtype='int32')
+
+# capture all records with any nan into a new df for display
+count_of_nan = count_nan_mob_data_for_plotting[(count_nan_mob_data_for_plotting.iloc[:,0] != 0) | 
+            (count_nan_mob_data_for_plotting.iloc[:,1] != 0) |
+            (count_nan_mob_data_for_plotting.iloc[:,2] != 0) |
+            (count_nan_mob_data_for_plotting.iloc[:,3] != 0) |
+            (count_nan_mob_data_for_plotting.iloc[:,4] != 0) |
+            (count_nan_mob_data_for_plotting.iloc[:,5] != 0)]
+
+count_days_data = mob_data_for_plotting['date'].nunique()
+print(f'Number of days of missing data in each activity bin by state out of {count_days_data} days of data')
+count_of_nan
+
+# fill nan by interpolation
+mobility_data.interpolate(method='linear', limit_direction='forward', axis=0, inplace=True)
+
+# show how well the interpolation did in filling the nan values - drop this when integrating into moduleHi John
+mob_data_for_plotting = mobility_data.iloc[:,0:8]
+
+mob_data_for_plotting.rename(columns={'retail_and_recreation_percent_change_from_baseline':'retail_pcfb',
+                     'grocery_and_pharmacy_percent_change_from_baseline':'groc_pcfb',
+                     'parks_percent_change_from_baseline':'parks_pcfb',
+                     'transit_stations_percent_change_from_baseline':'transit_pcfb',
+                     'workplaces_percent_change_from_baseline':'work_pcfb',
+                     'residential_percent_change_from_baseline':'res_pcfb'}, inplace=True)
+
+# List of state to use in the loop to process the data for each state
+list_of_states = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'District of Columbia', \
+                  'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', \
+                  'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', \
+                  'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', \
+                  'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', \
+                  'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming']
+
+#create an empty df to receive the processed data
+df_columns = [
+ 'sub_region_1',
+ 'date',
+ 'retail_and_recreation_percent_change_from_baseline',
+ 'grocery_and_pharmacy_percent_change_from_baseline',
+ 'parks_percent_change_from_baseline',
+ 'transit_stations_percent_change_from_baseline',
+ 'workplaces_percent_change_from_baseline',
+ 'residential_percent_change_from_baseline',
+ 'retail_and_recreation_percent_change_from_baseline_rolling_avg',
+ 'grocery_and_pharmacy_percent_change_from_baseline_rolling_avg',
+ 'parks_percent_change_from_baseline_rolling_avg',
+ 'transit_stations_percent_change_from_baseline_rolling_avg',
+ 'workplaces_percent_change_from_baseline_rolling_avg',
+ 'residential_percent_change_from_baseline_rolling_avg',
+ 'retail_n_rec_normal_exp_per_day',
+ 'groc_n_pharm_normal_exp_per_day',
+ 'parks_normal_exp_per_day',
+ 'trans_stat_normal_exp_per_day',
+ 'work_normal_exp_per_day',
+ 'res_normal_exp_per_day',
+ 'normal_exposure_per_day',]
+all_state_mob_data = pd.DataFrame(columns = df_columns)
+all_state_mob_data['date'] = pd.to_datetime(all_state_mob_data['date'])
+
+# loop through the data to process the data for each state
+for state_selected in list_of_states:
+    
+    # subselect state data
+    state_mob_data = mobility_data.drop(mobility_data.loc[mobility_data['sub_region_1'] \
+                                         != state_selected].index)
+        
+    # subselect just the data from the state that doesn't have a county listed 
+    #state_mobility_data = state_mob_data[state_mob_data['sub_region_2'].isna()]
+    
+    # create an explicit copy of the dataframe to avoid the "A value is trying to be set on a copy of a slice from 
+    # a DataFrame." Pandas warning
+    state_mobility_data = state_mob_data.copy()
+    
+    # calculate a rolling 7-day average for the 'precent change columns'
+    column_titles = ['retail_and_recreation_percent_change_from_baseline', \
+                    'grocery_and_pharmacy_percent_change_from_baseline', \
+                    'parks_percent_change_from_baseline', \
+                    'transit_stations_percent_change_from_baseline', \
+                    'workplaces_percent_change_from_baseline', \
+                    'residential_percent_change_from_baseline']
+    for cat_item in column_titles:
+        column_title = cat_item + '_rolling_avg'
+        state_mobility_data[column_title] = \
+        state_mobility_data[cat_item].rolling(window=7, center=False).mean()
+        
+    # the values in the embedded lists in the dictionary are "column titles" of the locations in state_mobility_data, 
+    # baseline hours spent in those locations, exposure rates (exposures/hour) in those locations under "normal" conditions
+   
+    column_name_dict = {
+            "retail_n_rec": ['retail_and_recreation_percent_change_from_baseline', 1, 50], 
+            "groc_n_pharm": ['grocery_and_pharmacy_percent_change_from_baseline', 1, 100],
+            "parks": ['parks_percent_change_from_baseline', 0.25, 4],
+            "trans_stat": ['transit_stations_percent_change_from_baseline', 0.25, 20],
+            "work": ['workplaces_percent_change_from_baseline', 8.75, 20],
+            "res": ['residential_percent_change_from_baseline', 12.75, 0.1]
+            }
+    
+    # calculate the daily exposure for the average person in each 'location' bucket under "normal" conditions
+    for item in column_name_dict:
+        new_column_title = item + '_normal_exp_per_day'
+        mobility_column = column_name_dict[item][0]
+        baseline_hours = column_name_dict[item][1]
+        exposure_rate = column_name_dict[item][2]
+   
+        # The hours that the individual spends goes up or down by the percentage change indicated by the mobility index. 
+        # The exposure rate also changes by the same proportion because there are commesurately more or less people in
+        # the space, thus increasing or decreasing the exposure rate
+        state_mobility_data[new_column_title] = \
+        ((state_mobility_data[mobility_column]/100 * baseline_hours) + baseline_hours) * \
+        (exposure_rate * (1 + state_mobility_data[mobility_column]/100))
+    
+    # sum the exposure buckets for "normal" conditions
+    sum_column = state_mobility_data['retail_n_rec_normal_exp_per_day'] + state_mobility_data['groc_n_pharm_normal_exp_per_day'] + \
+    state_mobility_data['parks_normal_exp_per_day'] + state_mobility_data['trans_stat_normal_exp_per_day'] + \
+    state_mobility_data['work_normal_exp_per_day'] + state_mobility_data['res_normal_exp_per_day']
+
+    state_mobility_data['normal_exposure_per_day'] = sum_column
+    
+    all_state_mob_data = all_state_mob_data.append(state_mobility_data, ignore_index = True)
+    
+    # drop intermediate dfs each loop
+    del state_mob_data
+    del state_mobility_data
+    
+    # Need the spaces to overwrite characters from longer names when followed by shorter names
+    print('Finished', state_selected,'                         ', end='\r')
+
+print('All Done!                                    ', end='\r')
+#all_state_mob_data.drop('sub_region_2', axis=1, inplace=True)
+
+# write the data out in case it's useful for something else
+all_state_mob_data.to_csv("data/all_state_mob_data.csv", index=False)
+
+# extracting latest date of GMD data for informing the viewer how current the data is
+latest_date_of_GMD = all_state_mob_data.nlargest(1, 'date')
+most_recent_GMD_data = str(latest_date_of_GMD.values[0][0])[:10]
+
+# drop extraneous columns
+for_weekly_mob_calc = all_state_mob_data.drop(["groc_n_pharm_normal_exp_per_day", 
+                                 "grocery_and_pharmacy_percent_change_from_baseline",
+                                 "grocery_and_pharmacy_percent_change_from_baseline_rolling_avg", 
+                                 "parks_normal_exp_per_day", 
+                                 "parks_percent_change_from_baseline", 
+                                 "parks_percent_change_from_baseline_rolling_avg", 
+                                 "res_normal_exp_per_day", 
+                                 "retail_and_recreation_percent_change_from_baseline",
+                                 "retail_and_recreation_percent_change_from_baseline_rolling_avg",
+                                 "retail_n_rec_normal_exp_per_day",
+                                 "trans_stat_normal_exp_per_day",
+                                 "transit_stations_percent_change_from_baseline",
+                                 "transit_stations_percent_change_from_baseline_rolling_avg",
+                                 "work_normal_exp_per_day",
+                                 "workplaces_percent_change_from_baseline",
+                                 "workplaces_percent_change_from_baseline_rolling_avg",
+                                 "residential_percent_change_from_baseline",
+                                 "residential_percent_change_from_baseline_rolling_avg"], axis=1)
+
+for_weekly_mob_calc['date'] =  pd.to_datetime(for_weekly_mob_calc['date'])
+
+# for_weekly_mob_calc.set_index('date', inplace=True)
+
+# sum the weekly mobility data, match the week starting date to the one used by the CDC
+weekly_mobility_data = for_weekly_mob_calc.groupby('sub_region_1').resample('W-SAT', on='date').sum()
+weekly_mobility_data.rename(columns={'normal_exposure_per_day':'weekly_expousres'}, inplace=True)
+
+latest_date_of_GMD = for_weekly_mob_calc['date'].max()
+
+weekly_mobility_data.reset_index(inplace=True)
+
+# delete the lastest week if it's not a complete week
+if latest_date_of_GMD.weekday() != 5:
+    latest_date_of_weekly_mob_data = weekly_mobility_data.date.max()
+    weekly_mobility_data = weekly_mobility_data[weekly_mobility_data.date != latest_date_of_weekly_mob_data]
+    
+
+###### add percent change in weekly exposures ######
+
+def per_change_mobility_func(rows):
+    # temporarily set panda options so that values with "divide by 0" are converted to nan instead of infinity
+    with pd.option_context('mode.use_inf_as_na', True):
+        rows['pro_chg_weekly_expousres'] = (rows['weekly_expousres'] - rows['weekly_expousres'].shift(1)) / rows['weekly_expousres'].shift(1)    
+        return rows
+
+weekly_mobility_data = weekly_mobility_data.groupby('sub_region_1').apply(per_change_mobility_func)
+
+###### end/add percent change in weekly exposures ######
+
+# merge the weekly_expousres data into the weekly_est_cases_deaths df
+weekly_est_cases_deaths = weekly_est_cases_deaths.merge(weekly_mobility_data, left_on=['state','date'], right_on=['sub_region_1','date'], how='outer') 
+del weekly_est_cases_deaths['sub_region_1']
+weekly_est_cases_deaths.drop(weekly_est_cases_deaths[weekly_est_cases_deaths['date'] <= '2020-02-08' ].index, inplace=True)
+
+# density correction of exposure rate
+weekly_est_cases_deaths['density_cor_expousre'] = weekly_est_cases_deaths['weekly_expousres'] * weekly_est_cases_deaths['rho']
+
+
+# calculate Psi
+prob_actual_exposure_to_disease = 0.01
+
+def add_psi(row):
+    if ((row['density_cor_expousre'] == 0) or (row['mobile_infectious'] == 0) or 
+        (row['rho'] == 0) or (row['est_inf'] == 0)):
+        return np.nan
+    elif isnan(row['density_cor_expousre'] or row['mobile_infectious'] or row['rho'] or row['est_inf']):
+        return np.nan
+    else:
+        psi = (row['est_inf']/(row['density_cor_expousre'] * row['mobile_infectious'] * prob_actual_exposure_to_disease))
+        return psi
+
+weekly_est_cases_deaths["psi"] = weekly_est_cases_deaths.apply(add_psi, axis=1)
+weekly_est_cases_deaths.head(3)
+
+print(weekly_est_cases_deaths.head())
+
+############ end/create exposure index using google mobility data ###################

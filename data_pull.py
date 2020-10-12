@@ -7,6 +7,8 @@
 
 import pandas as pd
 import os
+import requests
+from bs4 import BeautifulSoup
 
 os.makedirs("data", exist_ok=True)
 
@@ -60,9 +62,33 @@ while counter > first_data_col:
 deaths.to_csv('data/jhu_deaths_daily.csv',index=False)
 print("Done")
 
+###### import the CDC COVID-19 daily count of diagnostic testing in each state ##########
+# I couldn't figure out how to use the DKAN API that healthdata.gov uses (it only returned 10 records)
+# The CSV download link on the page uses the report date as part of the URL so it changes each day.
+# So, I used BeautifulSoup to extract the CSV download link to then read it into a dataframe.
+print("Downloading CDC Daily Testing Data")
+covid_testing_page_url = 'https://healthdata.gov/dataset/covid-19-diagnostic-laboratory-testing-pcr-testing-time-series'
+covid_testing_page_data = requests.get(covid_testing_page_url).text
+soup = BeautifulSoup(covid_testing_page_data, 'html.parser')
 
+soup_link_list = []
 
+for link in soup.find_all('a'):
+    soup_link_list.append(link.get('href'))
 
+for link in soup_link_list:
+    if link == None:
+        pass
+    else:
+        if link[:74] == 'https://healthdata.gov/sites/default/files/covid-19_diagnostic_lab_testing':
+            covid_test_data_url = link
+            break
+
+covid_testing_data_filename = covid_test_data_url[43:]
+covid_testing_data = pd.read_csv(covid_test_data_url, error_bad_lines=False)
+covid_testing_data.to_csv(f'data/covid_testing_data_backup/{covid_testing_data_filename}',index=False)
+covid_testing_data.to_csv('data/covid_testing_data_filecovid-19_diagnostic_lab_testing.csv',index=False)
+    
 # # This section is for preprossing the population data from the US Census Bureau. The data 
 # # won't chage during the timeframe of this study so it only needed to be downloaded and 
 # # preprocessed once, hence the code is commented out. If
