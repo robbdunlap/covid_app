@@ -1,13 +1,11 @@
 import pandas as pd
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
-import numpy as np
-import seaborn as sns
-from math import isnan, log
+from math import isnan
 from scipy.stats import linregress
-import matplotlib.dates as mdates
+import numpy as np
 
-###### remove extraneous data from the CDC Excess Deaths data set and add a column that is the avg of "Excess higher Estimate" and "Excess Higher Estimate" ######
+###### remove extraneous data from the CDC Excess Deaths data set and add the mid-point of excess deaths estimate ######
 
 # Import CDC excess deaths data from file
 xs_deaths = pd.read_csv("data/xs_deaths.csv")
@@ -71,7 +69,8 @@ del xs_deaths_2020_ny['index']
 
 
 
-###### munge JHU data and remove extraneous data ######
+
+###### munge JHU data, remove extraneous data, and add 7-day rolling averages ######
 
 # import data files
 new_cases = pd.read_csv("data/jhu_confirmed_daily.csv")
@@ -129,6 +128,17 @@ new_deaths_by_state_fixed.loc[(new_deaths_by_state_fixed['Province_State'] == 'N
 
 del deaths_NJ_6_26
 
+# add a column of a 7-day rolling average to daily cases and deaths
+new_cases_by_state['new_cases_rollavg'] = (new_cases_by_state.groupby('Province_State')
+                                                            .rolling(7)['new_cases']
+                                                            .mean()
+                                                            .reset_index(drop=True))
+
+new_deaths_by_state_fixed['new_deaths_rollavg'] = (new_deaths_by_state_fixed.groupby('Province_State')
+                                                                .rolling(7)['new_deaths']
+                                                                .mean()
+                                                                .reset_index(drop=True))
+
 # Outer Join of the daily_cases and daily_deaths tables
 combined_daily_cases_deaths = pd.merge(new_cases_by_state,new_deaths_by_state_fixed,on=['Province_State','Date'],how='outer')
 del new_cases_by_state
@@ -150,9 +160,12 @@ combined_daily_cases_deaths.to_csv("data/daily_cases_deaths.csv", index=False)
 
 
 
+
+
 ###### create a table of the JHU data summed into weekly values instead of daily and merge with CDC excess deaths data ######
 
-daily_cases_deaths = combined_daily_cases_deaths
+# drop the rolling averages, they're not necessary for the weekly sums data
+daily_cases_deaths = combined_daily_cases_deaths.drop(combined_daily_cases_deaths.columns[[3, 5]], axis=1)
 del combined_daily_cases_deaths
 
 # rename columns because I prefer this convention
@@ -160,16 +173,15 @@ daily_cases_deaths.rename(columns={"Province_State": "state", "Date": "date", "n
 
 # sum the weekly cases, match the week starting date to the one used by the CDC
 weekly_cases_deaths = daily_cases_deaths.groupby('state').resample('W-SAT', on='date').sum()
-weekly_cases_deaths['new_deaths_jhu'] = weekly_cases_deaths['new_deaths_jhu'].astype(int)
-
-# delete the lastest week if it's not a complete week
-latest_date_of_jhu_data = daily_cases_deaths['date'].max()
 
 # reset the index so 'date' is a column
 weekly_cases_deaths.reset_index(inplace=True)
 
-# remove the latest week's data unless the download data is through Saturday of that week (Sat is a complete week)
-# any other day of the week means partial weeks data
+# get latest date of JHU data to display for user to know that the data is fresh and for 
+# trimming latest week if it's not a complete week
+latest_date_of_jhu_data = daily_cases_deaths['date'].max()
+
+# delete the lastest week if it's not a complete week
 if latest_date_of_jhu_data.weekday() != 5:
     latest_date_of_weekly_cases_deaths = weekly_cases_deaths['date'].max()
     weekly_cases_deaths = weekly_cases_deaths[weekly_cases_deaths.date != latest_date_of_weekly_cases_deaths]
@@ -187,14 +199,10 @@ weekly_cases_deaths_xs = pd.merge(weekly_cases_deaths, xs_deaths_2020_ny, how='l
 select_back_to = latest_date_of_cdc_data - timedelta(weeks=4) # this gives the date of the 5th week back
 
 # select only the latest 4 weeks of data from the CDC excess deaths data
-latest_weeks_xs_deaths = weekly_cases_deaths_xs[(weekly_cases_deaths_xs['date'] > select_back_to) & 
-                                                (weekly_cases_deaths_xs['date'] <= latest_date_of_cdc_data)].copy()
+latest_weeks_xs_deaths = weekly_cases_deaths_xs[(weekly_cases_deaths_xs['date'] > select_back_to) & (weekly_cases_deaths_xs['date'] <= latest_date_of_cdc_data)].copy()
 
 # average the latest 4 weeks data
 latest_weeks_xs_deaths_avg = latest_weeks_xs_deaths.groupby('state').mean()
-
-# some states (NC) are not reporting data in recent weeks
-latest_weeks_xs_deaths_avg = latest_weeks_xs_deaths_avg.fillna(0)
 
 # convert the results to integers (rounds down)
 latest_weeks_xs_deaths_avg = latest_weeks_xs_deaths_avg.astype(int)
@@ -210,10 +218,22 @@ latest_weeks_xs_deaths_avg.reset_index(inplace=True)
 
 
 
+
 ###### calculating estimated actual deaths per day from CDC xs deaths and JHU reported deaths data ######
 
 # create a dictionary of the mid_point_xs_deaths to make calculation quicker in the df
 state_xs_deaths_dict = latest_weeks_xs_deaths_avg.set_index('state').to_dict()['mid_point_xs_deaths']
+
+# function to calculate the reported + excess deaths - use value if exists for date, otherwise use 
+# average of last 4 weeks of reported data
+
+# the old version that didn't work well for states will low deaths
+# def est_deaths(row):
+#     if row['date'] <= latest_date_of_cdc_data:
+#         corrected_value = row.fillna(0)['new_deaths_jhu'] + row.fillna(0)['mid_point_xs_deaths']
+#     else:
+#         corrected_value = row.fillna(0)['new_deaths_jhu'] + state_xs_deaths_dict[row['state']]
+#     return corrected_value
 
 # the new-improved version that doesn't estimate excess deaths for when a state has less than
 # 6 deaths that week. Instead, it just uses the JHU reported deaths value and doesn't make a
@@ -237,6 +257,7 @@ weekly_cases_deaths_xs.to_csv("data/weekly_cases_deaths_xs.csv", index=False)
 
 
 
+
 ###### add the estimated infections that occured 2 weeks previous to the date of the corrected deaths ######
 
 est_infections = weekly_cases_deaths_xs[['state', 'date','corr_new_deaths']].copy()
@@ -244,13 +265,9 @@ est_infections = weekly_cases_deaths_xs[['state', 'date','corr_new_deaths']].cop
 est_infections['offset_date'] = est_infections['date'] - timedelta(weeks=2)
 
 # this is the inverse of the estimated infection fatality ratio - taken from literature
-# https://www.medrxiv.org/content/10.1101/2020.05.03.20089854v4
-# https://www.cdc.gov/coronavirus/2019-ncov/hcp/planning-scenarios.html
-estimated_ifr = 1/0.0068
+estimated_ifr = 200
 
 est_infections['est_inf'] = est_infections['corr_new_deaths'] * estimated_ifr
-est_infections['est_inf'] = est_infections['est_inf'].astype(int)
-
 
 # drop estimated infections before the start of the JHU dataset - not critical, just because
 est_infections.drop(est_infections[est_infections['offset_date'] < '2020-01-22'].index , inplace=True)
@@ -262,40 +279,27 @@ est_infections.drop(['date', 'corr_new_deaths'], axis = 1, inplace=True)
 # in nan values for the lastest two weeks. This method back-calculates the estimated 
 # number of infections that had to have occured to cause the specified number of deaths,
 # therefore the latest two weeks will have nan values. These values will be filled in 
-# as the pandemic progresses.
+# as time proceeds.
 weekly_est_cases_deaths = weekly_cases_deaths_xs.merge(est_infections, 
                                                        left_on=['state','date'], 
                                                        right_on=['state','offset_date'],
                                                        how='outer')
+                                    
+# save as csv for use by other modules
+weekly_est_cases_deaths.to_csv('data/weekly_est_cases_deaths.csv', index=False)
 
 ###### end/add the estimated infections that occured 2 weeks previous to the date of the corrected deaths ######
 
 
 
-###### add percent change in weekly est_inf ######
-
-def per_change_est_cases_func(rows):
-    # temporarily set panda options so that values with "divide by 0" are converted to nan instead of infinity
-    with pd.option_context('mode.use_inf_as_na', True):
-        # this function calculates the proportion, not the percentage, hence the variable name 'pro_chag_est_inf'
-        rows['pro_chg_est_inf'] = (rows['est_inf'] - rows['est_inf'].shift(1)) / rows['est_inf'].shift(1)    
-        return rows
-
-weekly_est_cases_deaths = weekly_est_cases_deaths.groupby('state').apply(per_change_est_cases_func)
-weekly_est_cases_deaths['pro_chg_est_inf'] = weekly_est_cases_deaths['pro_chg_est_inf'].round(4)
-
-###### end/add percent change in weekly est_inf ######
-
-
 ###### calculating the estimated proportion of the population that has already been infected with COVID-19 ######
 
-# remove the last 2 weeks of data for each state because we don't have estimated infections for those dates
+# remove the last 2 weeks of data for each state because I don't have estimated infections for those dates
 max_date_est_inf = weekly_est_cases_deaths['offset_date'].max()
 trimed_last_2_wks = weekly_est_cases_deaths[(weekly_est_cases_deaths['date'] <= max_date_est_inf)]
 
 sum_infections = trimed_last_2_wks.groupby('state')['est_inf','new_cases_jhu'].sum().astype('int32')
 
-# add state population data
 state_pop = pd.read_csv('data/state_pop.csv')
 
 percent_pop_infected = state_pop.merge(sum_infections, left_on="NAME", right_on="state")
@@ -317,6 +321,7 @@ percent_total_us_pop_reported_infected = f"{100*total_reported_infected/total_po
 # from https://worldpopulationreview.com/states/state-abbreviations
 state_abbrevs = pd.read_csv('data/state_abbrevs.csv')
 
+
 def add_state_id(row):
     state = row['state']
     state_id = state_abbrevs[state_abbrevs['State'] == state]['Code']
@@ -327,11 +332,6 @@ percent_pop_infected['state_id'] =  percent_pop_infected.apply(add_state_id, axi
 latest_date_of_estimate = str(max_date_est_inf)[:10]
 date_of_reporting = str(latest_date_of_jhu_data)[:10]
 
-# drop the offset date column because it's no longer necessary
-del weekly_est_cases_deaths['offset_date']
-
-print()
-print()
 print(f'Latest date of entry in JHU data {date_of_reporting}\n')
 print('Estimated total percent of the US population that')
 print(f'has been infected by COVID-19 as of {latest_date_of_estimate}:      '+str(percent_total_us_pop_est_infected)+'%\n')
@@ -339,15 +339,13 @@ print('Reported total percent of the US population that')
 print(f'has been infected by COVID-19 as of {latest_date_of_estimate}:      '+str(percent_total_us_pop_reported_infected)+'%\n')
 print(f'Propotion of population in all states that have been infected as of {latest_date_of_estimate} (reverse rank ordered)')
 print('-----------------------------------------------------------------------------------------------------')
-print(percent_pop_infected)
-print()
-print()
 
-###### end/calculating the estimated proportion of the population that has already been infected with COVID-19 ######
+percent_for_display = percent_pop_infected.to_string(index=False)
+print(percent_for_display)
+del percent_for_display
 
+###### estimating the number of people in an infectious state at specific dates ######
 
-
-###### estimating the population size of people infectious at specific dates ######
 # in the original version of this analysis I was calculating total number of infections
 # on a daily basis. In this version I switched to calculating infections on a weekly 
 # basis to improve the statistical quality of the data. Previously I was calculating the 
@@ -356,8 +354,15 @@ print()
 # since I'm summing up infections by week. I could still maintain a count of infections by 
 # day but I don't think it would be that much of a change relative to just using the count
 # of the people infected in the previous week as the number of people in an infectious 
-# state - I think it's a reasonable approximation for a machine learning approach.
+# state - it should be a good enough approximation for a machine learning approach.
 
+# Maybe, the total infectious population should be 7 times this number. When calculating the 
+# infectious population on a specific day it's an integration of all the people who were infected 
+# 4 to 11 days before (7 full days). When summing all the people who were infected per week
+# then you might need to sum up the infectious population across all 7 days. But, since this 
+# is just a straight multiplcation then the relationship between infectious population
+# and infections would still be easily seen, regardless if multiplying by 7. I'll let it stay
+# as just the total number of people infected in the previous week.
 
 # formula to sum up all the people who were infected between 4-10 days previous to the 
 # current date being evaluated (literature estimate of avg infectious period is 7 days)
@@ -367,7 +372,7 @@ def infectious_count(row):
         if isnan(weekly_est_cases_deaths.iloc[offset_index,9]):
             pass
         else:
-            infectious_populace = weekly_est_cases_deaths.iloc[offset_index,8]
+            infectious_populace = weekly_est_cases_deaths.iloc[offset_index,9]
             return infectious_populace
 
 weekly_est_cases_deaths["mobile_infectious"] = weekly_est_cases_deaths.apply(infectious_count, axis=1)
@@ -387,69 +392,49 @@ def population(row):
 weekly_est_cases_deaths["phi"] = weekly_est_cases_deaths.apply(proportion_infected, axis=1)
 weekly_est_cases_deaths["population"] = weekly_est_cases_deaths.apply(population, axis=1)
 
-###### end/estimating the population size of people infectious at specific dates ######
+###### end/estimating the number of people in an infectious state at specific dates ######
 
 
-###### estimating population density in states ######
 
-# State pop divided by state size is not sufficient. An excellent example of this Alaska. Greater than 
-# 90% of the population lives in 10 towns. The total area these people occupy is probably way less than 10% 
-# of the size of the state. The actual average population density people exerience is therefor way higher than the
-# value you would get by dividing state pop by state size. I coudln't find free published data that calculated 
-# effective density so this section makes an approximation by calculating the proportional density of each counties
-# (sum of each county's population divided by the county's land area multiplied by the percent state population
-# that lives in the county). This method probably under-estimates effective density but is better than 
-# state pop/state area.
+###### adding the average population density (rho) for each state to the df ######
 
-# The Census Bureau is publishing population statistics for COVID data science users:
-# https://covid19.census.gov/datasets/average-household-size-and-population-density-county/data?geometry=125.999%2C-0.672%2C-125.368%2C76.524
+#Use of the free database in production requires that you link back to:
+#https://simplemaps.com/data/us-cities
 
-# column headings
-# OBJECTID	 GNIS County Code	 Geographic Identifier - FIPS Code	 Area of Land (square meters)	 Area of Water (square meters)	 Name	 
-# State	 Average Household Size	 Average Household Size - Margin of Error	 Average Household Size of Owner-Occupied Unit	 
-# Average Household Size of Owner-Occupied Unit - Margin of Error	 Average Household Size of Renter-Occupied Unit	 
-# Average Household Size of Renter-Occupied Unit - Margin of Error	 Total Population	 Total Population - Margin of Error	 
-# Population Density (people per square kilometer)	 created_user	 created_date	 last_edited_user	 last_edited_date	 Shape__Area	 
-# Shape__Length	 Population Density - Margin of Error
+citimaps = pd.read_csv('data/simplemaps_uscities_basicv1.6/uscities.csv')
 
-fips_density = pd.read_csv('data/Average_Household_Size_and_Population_Density_-_County.csv')
+indexNames = citimaps[ (citimaps['state_id'] == 'US') | 
+                      (citimaps['state_id'] == 'PR')].index
 
-state_density = fips_density[['State', 'NAME', 'B01001_001E', 'B01001_calc_PopDensity']].copy()
-del fips_density
-state_density.rename(columns={'State':'state','NAME':'county','B01001_001E':'county_pop', 'B01001_calc_PopDensity':'county_pop_density'}, inplace=True)
+citimaps.drop(indexNames , inplace=True) 
 
-state_pops = state_density.groupby('state')['county_pop'].sum()
+state_density = citimaps.groupby('state_id')[['population','density']].mean()
+state_density.sort_values(by=['density'], inplace=True)
 
-state_density = state_density.merge(state_pops, left_on='state', right_on='state', how='outer') 
-state_density.rename(columns={'county_pop_x':'county_pop','county_pop_y':'state_pop'}, inplace=True)
+state_density.rename(columns={"population": "avg_city_pop", "density": "avg_city_density"}, inplace=True)
 
-# pop density is people per square kilometer
-state_density['proportional_co_density'] = state_density['county_pop'] / state_density['state_pop'] * state_density['county_pop_density']
+highest_density = state_density.nlargest(1, 'avg_city_density')
 
-state_densities = state_density.groupby('state')['proportional_co_density'].sum()
-state_densities = pd.DataFrame(data=state_densities)
-state_densities.reset_index(inplace=True)
-state_densities.rename(columns={'proportional_co_density':'state_density'}, inplace=True)
+# rho is the normalized avg_city_density index
+state_density['propotionate_density'] = state_density['avg_city_density'] / highest_density.values[0][1]
+state_density.reset_index(level=0, inplace=True)
 
-# convert densities to natural logs to make the differences between states more linear
-def log_density(row):
-    state_density = row['state_density']
-    log_state_density = log(state_density)
-    return log_state_density
+# Calculate the slope of the transform for density to normalized values between 0.5 and 1.
+# I decided that the most dense state has BER = 1 while the least dense state has BER = 0.5.
+# This compresses all the values between 0.5 for the lowest and 1.0 for the highest in the dataset
+x1 = state_density.nsmallest(1, 'avg_city_density').values[0][3]
+x2 = state_density.nlargest(1, 'avg_city_density').values[0][3]
+y1 = 0.5
+y2 = 1
 
-state_densities['log_state_density'] = state_densities.apply(log_density, axis=1)
-state_densities.sort_values(by=['state_density'], inplace=True)
+slope, intercept, r_value, p_value, std_err = linregress([x1,x2],[y1,y2])
 
-# compress the ln scale of state densities between 0 and 1.
-# rho is the normalized avg_city_density index between 0 and 1 (1 being set by the most dense state)
-highest_density = state_densities.nlargest(1, 'log_state_density')
-state_densities['proportionate_log_density'] = state_densities['log_state_density'] / highest_density.values[0][2]
-state_densities.reset_index(drop=True, inplace=True)
+def rho_calc(row):
+    rho = slope * row['propotionate_density'] + intercept
+    return rho
 
-# add est_inf/100,000 population
-weekly_est_cases_deaths['est_inf_per_100k'] = weekly_est_cases_deaths['est_inf'] / (weekly_est_cases_deaths['population'] / 100000)
+state_density["rho"] = state_density.apply(rho_calc, axis=1)
 
-# add the two letter state code to the df for plotting purposes
 def state_id(row):
     state = row['state']
     state_id = state_abbrevs[state_abbrevs['State'] == state]['Code']
@@ -457,82 +442,30 @@ def state_id(row):
 
 weekly_est_cases_deaths['state_id'] =  weekly_est_cases_deaths.apply(state_id, axis=1)
 
-# add proportionate (b/w 0 and 1) log density for each state
 def add_rho(row):
-    state = row['state']
-    rho = state_densities[state_densities['state'] == state]['proportionate_log_density']
+    state = row['state_id']
+    rho = state_density[state_density['state_id'] == state]['rho']
     return rho.values[0]
 
 weekly_est_cases_deaths['rho'] =  weekly_est_cases_deaths.apply(add_rho, axis=1)
 
-###### end/estimating population density in states ######
+###### end/adding the average population density (rho) for each state to the df ######
 
 
 
-############ create exposure index using google mobility data ###################
+###### calculating estimated exposures per day per individual in each state ######
+
 mobility_data = pd.read_csv("data/Global_Mobility_Report.csv")
 
 # drop non-US data
 mobility_data.drop(mobility_data.loc[mobility_data['country_region_code'] != "US"].index, inplace=True)
 
-# drop county data, only using state level data for this analysis
-mobility_data = mobility_data[mobility_data['sub_region_2'].isna()]
-
 # drop other unnecessary columns
-mobility_data.drop(['country_region_code','country_region','iso_3166_2_code','census_fips_code','metro_area','sub_region_2'], axis=1, inplace=True)
+mobility_data.drop(['country_region_code','country_region','iso_3166_2_code','census_fips_code'], axis=1, inplace=True)
+
 
 # convert date column to datetime formate
 mobility_data['date'] = pd.to_datetime(mobility_data['date'])
-
-# there are values that are "US" but don't have a sub_region_1 - they're probably all US - drop these
-mobility_data.dropna(subset=['sub_region_1'], inplace=True)
-
-mob_data_for_plotting = mobility_data.iloc[:,0:8]
-
-mob_data_for_plotting.rename(columns={'retail_and_recreation_percent_change_from_baseline':'retail_pcfb',
-                     'grocery_and_pharmacy_percent_change_from_baseline':'groc_pcfb',
-                     'parks_percent_change_from_baseline':'parks_pcfb',
-                     'transit_stations_percent_change_from_baseline':'transit_pcfb',
-                     'workplaces_percent_change_from_baseline':'work_pcfb',
-                     'residential_percent_change_from_baseline':'res_pcfb'}, inplace=True)
-
-# count the number of nan values in the mobility data
-count_nan_mob_data_for_plotting = pd.DataFrame(mob_data_for_plotting[['retail_pcfb',
-              'groc_pcfb',
-              'parks_pcfb',
-              'transit_pcfb',
-              'work_pcfb',
-              'res_pcfb']
-             ].isnull().groupby(mob_data_for_plotting['sub_region_1']).sum())
-
-# get rid of the decimals by converting to int
-count_nan_mob_data_for_plotting = count_nan_mob_data_for_plotting.iloc[:,0:6].astype(dtype='int32')
-
-# capture all records with any nan into a new df for display
-count_of_nan = count_nan_mob_data_for_plotting[(count_nan_mob_data_for_plotting.iloc[:,0] != 0) | 
-            (count_nan_mob_data_for_plotting.iloc[:,1] != 0) |
-            (count_nan_mob_data_for_plotting.iloc[:,2] != 0) |
-            (count_nan_mob_data_for_plotting.iloc[:,3] != 0) |
-            (count_nan_mob_data_for_plotting.iloc[:,4] != 0) |
-            (count_nan_mob_data_for_plotting.iloc[:,5] != 0)]
-
-count_days_data = mob_data_for_plotting['date'].nunique()
-print()
-print(f'Number of days of missing data in each activity bin by state out of {count_days_data} days of data')
-print(count_of_nan)
-
-# fill nan by interpolation
-mobility_data.interpolate(method='linear', limit_direction='forward', axis=0, inplace=True)
-
-# show how well the interpolation did in filling the nan values - drop this when integrating into moduleHi John
-mob_data_for_plotting = mobility_data.iloc[:,0:8]
-
-mob_data_for_plotting.rename(columns={'retail_and_recreation_percent_change_from_baseline':'retail_pcfb',
-                     'grocery_and_pharmacy_percent_change_from_baseline':'groc_pcfb',
-                     'parks_percent_change_from_baseline':'parks_pcfb',
-                     'transit_stations_percent_change_from_baseline':'transit_pcfb',
-                     'workplaces_percent_change_from_baseline':'work_pcfb',
-                     'residential_percent_change_from_baseline':'res_pcfb'}, inplace=True)
 
 # List of state to use in the loop to process the data for each state
 list_of_states = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'District of Columbia', \
@@ -542,9 +475,10 @@ list_of_states = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Col
                   'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', \
                   'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming']
 
-#create an empty df to receive the processed data
+# create an empty df to receive the processed data
 df_columns = [
  'sub_region_1',
+ 'sub_region_2',
  'date',
  'retail_and_recreation_percent_change_from_baseline',
  'grocery_and_pharmacy_percent_change_from_baseline',
@@ -576,11 +510,11 @@ for state_selected in list_of_states:
                                          != state_selected].index)
         
     # subselect just the data from the state that doesn't have a county listed 
-    #state_mobility_data = state_mob_data[state_mob_data['sub_region_2'].isna()]
+    state_mobility_data = state_mob_data[state_mob_data['sub_region_2'].isna()]
     
     # create an explicit copy of the dataframe to avoid the "A value is trying to be set on a copy of a slice from 
     # a DataFrame." Pandas warning
-    state_mobility_data = state_mob_data.copy()
+    state_mobility_data = state_mobility_data.copy()
     
     # calculate a rolling 7-day average for the 'precent change columns'
     column_titles = ['retail_and_recreation_percent_change_from_baseline', \
@@ -594,16 +528,18 @@ for state_selected in list_of_states:
         state_mobility_data[column_title] = \
         state_mobility_data[cat_item].rolling(window=7, center=False).mean()
         
-    # the values in the embedded lists in the dictionary are "column titles" of the locations in state_mobility_data, 
-    # baseline hours spent in those locations, exposure rates (exposures/hour) in those locations under "normal" conditions
+    # the values in the embedded lists in the dictionary are "column titles" of the locations istn state_mobility_data, 
+    # baseline hours spent in those locations, exposure rates in those locations under "normal" conditions,
+    # exposure rates in those locations under "strict" social distancing conditions, and exposure rates in those 
+    # locations under "relaxed" social distancing conditions
    
     column_name_dict = {
             "retail_n_rec": ['retail_and_recreation_percent_change_from_baseline', 1, 50], 
             "groc_n_pharm": ['grocery_and_pharmacy_percent_change_from_baseline', 1, 100],
-            "parks": ['parks_percent_change_from_baseline', 0.25, 4],
+            "parks": ['parks_percent_change_from_baseline', 0.25, 10],
             "trans_stat": ['transit_stations_percent_change_from_baseline', 0.25, 20],
             "work": ['workplaces_percent_change_from_baseline', 8.75, 20],
-            "res": ['residential_percent_change_from_baseline', 12.75, 0.1]
+            "res": ['residential_percent_change_from_baseline', 12.75, 1]
             }
     
     # calculate the daily exposure for the average person in each 'location' bucket under "normal" conditions
@@ -637,7 +573,7 @@ for state_selected in list_of_states:
     print('Finished', state_selected,'                         ', end='\r')
 
 print('All Done!                                    ', end='\r')
-#all_state_mob_data.drop('sub_region_2', axis=1, inplace=True)
+all_state_mob_data.drop('sub_region_2', axis=1, inplace=True)
 
 # write the data out in case it's useful for something else
 all_state_mob_data.to_csv("data/all_state_mob_data.csv", index=False)
@@ -650,6 +586,7 @@ most_recent_GMD_data = str(latest_date_of_GMD.values[0][0])[:10]
 for_weekly_mob_calc = all_state_mob_data.drop(["groc_n_pharm_normal_exp_per_day", 
                                  "grocery_and_pharmacy_percent_change_from_baseline",
                                  "grocery_and_pharmacy_percent_change_from_baseline_rolling_avg", 
+                                 "metro_area", 
                                  "parks_normal_exp_per_day", 
                                  "parks_percent_change_from_baseline", 
                                  "parks_percent_change_from_baseline_rolling_avg", 
@@ -670,9 +607,8 @@ for_weekly_mob_calc['date'] =  pd.to_datetime(for_weekly_mob_calc['date'])
 
 # for_weekly_mob_calc.set_index('date', inplace=True)
 
-# sum the weekly mobility data, match the week starting date to the one used by the CDC
-weekly_mobility_data = for_weekly_mob_calc.groupby('sub_region_1').resample('W-SAT', on='date').sum()
-weekly_mobility_data.rename(columns={'normal_exposure_per_day':'weekly_expousres'}, inplace=True)
+# sum the weekly cases, match the week starting date to the one used by the CDC
+weekly_mobility_data = for_weekly_mob_calc.groupby('sub_region_1').resample('W-SAT', on='date').mean()
 
 latest_date_of_GMD = for_weekly_mob_calc['date'].max()
 
@@ -683,77 +619,28 @@ if latest_date_of_GMD.weekday() != 5:
     latest_date_of_weekly_mob_data = weekly_mobility_data.date.max()
     weekly_mobility_data = weekly_mobility_data[weekly_mobility_data.date != latest_date_of_weekly_mob_data]
     
-
-###### add percent change in weekly exposures ######
-
-def per_change_mobility_func(rows):
-    # temporarily set panda options so that values with "divide by 0" are converted to nan instead of infinity
-    with pd.option_context('mode.use_inf_as_na', True):
-        rows['pro_chg_weekly_expousres'] = (rows['weekly_expousres'] - rows['weekly_expousres'].shift(1)) / rows['weekly_expousres'].shift(1)    
-        return rows
-
-weekly_mobility_data = weekly_mobility_data.groupby('sub_region_1').apply(per_change_mobility_func)
-
-# merge the weekly_expousres data into the weekly_est_cases_deaths df
+# merge the normal_exposure_per_day data into the weekly_est_cases_deaths df
 weekly_est_cases_deaths = weekly_est_cases_deaths.merge(weekly_mobility_data, left_on=['state','date'], right_on=['sub_region_1','date'], how='outer') 
 del weekly_est_cases_deaths['sub_region_1']
 weekly_est_cases_deaths.drop(weekly_est_cases_deaths[weekly_est_cases_deaths['date'] <= '2020-02-08' ].index, inplace=True)
 
-###### end/add percent change in weekly exposures ######
+###### end/calculating estimated exposures per day per individual in each state ######
 
-# density correction of exposure rate
-weekly_est_cases_deaths['density_cor_expousre'] = weekly_est_cases_deaths['weekly_expousres'] * weekly_est_cases_deaths['rho']
 
-# calculate Psi
+
+###### calculating PPE/Hand-Hygiene Index (Psi) ######
+
 prob_actual_exposure_to_disease = 0.01
 
 def add_psi(row):
-    if ((row['density_cor_expousre'] == 0) or (row['mobile_infectious'] == 0) or 
+    if ((row['normal_exposure_per_day'] == 0) or (row['mobile_infectious'] == 0) or 
         (row['rho'] == 0) or (row['est_inf'] == 0)):
         return np.nan
-    elif isnan(row['density_cor_expousre'] or row['mobile_infectious'] or row['rho'] or row['est_inf']):
-        return np.nan
     else:
-        psi = (row['est_inf']/(row['density_cor_expousre'] * row['mobile_infectious'] * prob_actual_exposure_to_disease))
+        psi = (row['est_inf']/(row['normal_exposure_per_day'] * row['mobile_infectious'] * row['rho'] * prob_actual_exposure_to_disease))
         return psi
 
 weekly_est_cases_deaths["psi"] = weekly_est_cases_deaths.apply(add_psi, axis=1)
 
-
-############ end/create exposure index using google mobility data ###################
-
-
-
-
-
-
-# CDC Test Positivity Rate
-# https://healthdata.gov/dataset/covid-19-diagnostic-laboratory-testing-pcr-testing-time-series/resource/fe3c12ae-bdba-49eb#{}
-
-
-test_positivity_df = pd.read_csv('data/covid_testing_data_filecovid-19_diagnostic_lab_testing.csv')
-total_test_df = test_positivity_df.groupby(['state_name', 'date']).sum()
-total_test_df.drop(total_test_df[['state_fips','total_results_reported']], axis=1, inplace=True)
-positive_tests_df = test_positivity_df[test_positivity_df['overall_outcome']== 'Positive'].copy()
-positive_tests_df.drop(positive_tests_df.columns[[0,2,3,4,7,]], axis=1, inplace=True)
-positive_tests_df.rename(columns={'new_results_reported':'positive_results'}, inplace=True)
-positive_tests_df
-total_test_df = total_test_df.merge(positive_tests_df, left_on=['state_name', 'date'], right_on=['state_name', 'date'])
-
-# calculate the daily test positivity result
-total_test_df['test_positivity_rate'] = total_test_df['positive_results'] / total_test_df['new_results_reported']
-total_test_df['date'] =  pd.to_datetime(total_test_df['date'])
-
-
-total_test_weekly_df = total_test_df.groupby('state_name').resample('W-SAT', on='date').sum()
-
-weekly_est_cases_deaths = weekly_est_cases_deaths.merge(total_test_weekly_df, left_on=['state','date'], right_on=['state_name', 'date'])
-
-
-# save as csv for use by other modules
-weekly_est_cases_deaths.to_csv('data/weekly_est_cases_deaths.csv', index=False)
-
-
-
-
+###### end/calculating PPE/Hand-Hygiene Index (Psi) ######
 
