@@ -448,6 +448,7 @@ state_densities.reset_index(drop=True, inplace=True)
 
 # add est_inf/100,000 population
 weekly_est_cases_deaths['est_inf_per_100k'] = weekly_est_cases_deaths['est_inf'] / (weekly_est_cases_deaths['population'] / 100000)
+weekly_est_cases_deaths['new_cases_per_100k'] = weekly_est_cases_deaths['new_cases_jhu'] / (weekly_est_cases_deaths['population'] / 100000)
 
 # add the two letter state code to the df for plotting purposes
 def state_id(row):
