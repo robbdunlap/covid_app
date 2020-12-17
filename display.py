@@ -20,10 +20,16 @@ weekly_est_cases_deaths['date'] =  pd.to_datetime(weekly_est_cases_deaths['date'
 
 # import proportion of population infected to date
 proportion_pop_infected = pd.read_csv("data/proportion_pop_infected.csv", usecols=['state','est_proportion_infected','rep_proportion_infected'])
-
 proportion_pop_infected.rename(columns={'state':'State','est_proportion_infected':'Estimated Percent Infected','rep_proportion_infected':'Reported Percent Infected'}, inplace=True)
 
+# import total reported and estimated percent of US population infected to date
+file_path = 'data/estimated_percent_US_infected.txt'
+with open(file_path, 'r') as filetoread:
+    percent_total_us_pop_est_infected = filetoread.read()
 
+file_path = 'data/reported_percent_US_infected.txt'
+with open(file_path, 'r') as filetoread:
+    percent_total_us_pop_reported_infected = filetoread.read()
 
 # grab a list of the states'/territories' names fromt the df so that streamlit can display a drop-down selector 
 states = weekly_est_cases_deaths.state.unique()
@@ -111,10 +117,22 @@ fig3.update_layout(
 
 st.plotly_chart(fig3, use_container_width=True)
 
+# Display of latest totals
+st.markdown('___')
+st.header(f'Total Percent of the US Population Estimated Infected to Date: **{percent_total_us_pop_est_infected}**')
+st.header(f'Total Percent of the US Population Reported Infected to Date: **{percent_total_us_pop_reported_infected}**')
+st.markdown('___')
+st.header('')
+
 # Proportion of the population infected to date
+st.header("Latest Estimated and Reported Percent of State's Infected to Date")
 dfStyler = proportion_pop_infected.style.set_properties(**{'font-size': '10pt',})\
                                         .format({'Estimated Percent Infected':'{:.1%}','Reported Percent Infected':'{:.1%}'})
 st.dataframe(dfStyler)
+
+# Padding
+st.header('')
+st.markdown('___')
 
 # title separating the total US data from the two state comparison graphs
 st.title('COVID-19 Data by US State')
@@ -219,7 +237,7 @@ chart = alt.Chart(df_exposure_data_sel_states_melt).mark_line().encode(
     x='date',
     y='exposures per week',
     color='state',
-)
+).properties(title=f'Exposures per Week in {state_1_selected} vs. {state_2_selected}')
 st.altair_chart(chart, use_container_width=True)
 
 # # graph title and labels for State 1
@@ -231,5 +249,5 @@ chart = alt.Chart(df_corr_exposure_data_sel_states_melt).mark_line().encode(
     x='date',
     y='density corrected exposures per week',
     color='state',
-)
+).properties(title=f'Population Density Corrected Exposures per Week in {state_1_selected} vs. {state_2_selected}')
 st.altair_chart(chart, use_container_width=True)

@@ -5,191 +5,249 @@ from datetime import datetime
 import streamlit as st
 import altair as alt
 import plotly.express as px
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from matplotlib.dates import SU
+import numpy as np
 
 # title the page
-st.title('COVID-19 Data by US State')
+st.title('COVID-19 Data in the US')
 st.title('')   # padding to separate page title from graphs
 
 # import data files
-df = pd.read_csv("data/daily_cases_deaths.csv")
-df_mob = pd.read_csv("data/all_state_mob_data.csv")
+weekly_est_cases_deaths = pd.read_csv("data/weekly_est_cases_deaths.csv")
+weekly_est_cases_deaths['date'] =  pd.to_datetime(weekly_est_cases_deaths['date'])
 
-# rename mob_index columns to human readable names
-df_mob = df_mob.rename(columns={"normal_exposure_per_day": "Normal", "strict_exposure_per_day": "Strict", "relaxed_exposure_per_day": "Relaxed"})
+# import proportion of population infected to date
+proportion_pop_infected = pd.read_csv("data/proportion_pop_infected.csv", usecols=['state','est_proportion_infected','rep_proportion_infected'])
+proportion_pop_infected.rename(columns={'state':'State','est_proportion_infected':'Estimated Percent Infected','rep_proportion_infected':'Reported Percent Infected'}, inplace=True)
 
-# convert the data data from object to datetime
-df['Date'] = pd.to_datetime(df['Date'])
-df_mob['Date'] = pd.to_datetime(df_mob['Date'])
+# import total reported and estimated percent of US population infected to date
+file_path = 'data/estimated_percent_US_infected.txt'
+with open(file_path, 'r') as filetoread:
+    percent_total_us_pop_est_infected = filetoread.read()
 
-# create df of mob data with just the three columns of interest
-cols_to_keep = [2, 6, 37, 38, 39]
-df_mob_indexes = df_mob.iloc[:, cols_to_keep]
-df_mob_index_melt = pd.melt(df_mob_indexes, id_vars=['Date', 'sub_region_1'], value_vars=['Normal', 'Strict', 'Relaxed']).sort_values(by=['Date'])
-df_mob_index_melt = df_mob_index_melt.rename(columns={"variable": "Posture"})
+file_path = 'data/reported_percent_US_infected.txt'
+with open(file_path, 'r') as filetoread:
+    percent_total_us_pop_reported_infected = filetoread.read()
 
 # grab a list of the states'/territories' names fromt the df so that streamlit can display a drop-down selector 
-states = df.Province_State.unique()
+states = weekly_est_cases_deaths.state.unique()
 
 # streamlit selectbox for selecting which state to plot
-state_selected = st.sidebar.selectbox('Select state of interest', states, index=(46))
+st.sidebar.markdown('### Choose 2 States to Compare')
+state_1_selected = st.sidebar.selectbox('Select state 1 of interest', states, index=(46))
+state_2_selected = st.sidebar.selectbox('Select state 2 of interest', states, index=(20))
 
 # subselect the data for the selected state from the dataframe
-df_for_display = df[df.Province_State.isin([state_selected])]
+df_for_display1 = weekly_est_cases_deaths[weekly_est_cases_deaths.state.isin([state_1_selected])]
+df_for_display2 = weekly_est_cases_deaths[weekly_est_cases_deaths.state.isin([state_2_selected])]
 
-df_mob_data_for_display = df_mob_index_melt[df_mob_index_melt.sub_region_1.isin([state_selected])]
-
-# grab the latest date of the GCMD to let the user know how fresh the data is
-gcmd_freshness = df_mob_data_for_display['Date'].max()
-latest_date_of_goog_data = datetime.strftime(gcmd_freshness, '%Y-%m-%d')
-
-#==============================================================
-# Create dual-axis plot to display 7-day rolling average of new_cases and new_deaths for the state selected
-#==============================================================
-
-# first, create a scalling factor so the daily_deaths_rollavg will "fit under" the daily_cases_rollavg line
-###   grab max value of each column 
-all_scale = df_for_display.max()
-
-print(df_for_display.head(3))
-
-###   subselect the max values for new_cases_daily and new_deaths_daily 
-latest_date_of_data = datetime.strftime(all_scale[1], '%Y-%m-%d')
-new_cases_max = all_scale[3]
-new_deaths_max = all_scale[5]
-
-
-###   change this number to adjust the scale of the secondary Y-axis so the the daily_new_deaths
-###   smaller than the new_cases_daily
-set_scale_factor = 3
-
-###   calculate the scale adjustment for the seondary Y-axis and return it as a list for altair to graph
-scale_factor = int(new_deaths_max * set_scale_factor)
-for_scaling = [0, scale_factor]
+# grab the latest date of the JHU and GCMD to let the user know how fresh the data is
+file_path_JHU = 'data/latest_date_of_JHU_data.txt'
+file_path_GMD = 'data/latest_date_of_GMD.txt'
+with open(file_path_JHU, 'r') as filetoread:
+    latest_date_of_JHU_data = filetoread.read()
+with open(file_path_GMD, 'r') as filetoread:
+    latest_date_of_GMD = filetoread.read()
 
 # show latest date of data on the dashboard
 for i in range(1,11):     # padding
     st.sidebar.title('')   
-st.sidebar.markdown(f'##### Data is from JHU dataset with {latest_date_of_data} being the latest date of data in the set')
+st.sidebar.markdown(f'##### Data is from JHU dataset with {latest_date_of_JHU_data} being the latest date of data in the set')
 st.sidebar.markdown('##### https://github.com/CSSEGISandData/COVID-19') 
 st.sidebar.title('')       # padding 
-st.sidebar.markdown(f'##### Mobility index is derived from Google Mobility Data as of {latest_date_of_goog_data}')
+st.sidebar.markdown(f'##### Mobility index is derived from Google Mobility Data as of {latest_date_of_GMD}')
 st.sidebar.markdown('##### https://www.google.com/covid19/mobility/index.html')
 
+# Total estimated US cases vs. reported in JHU data
+total_weekly_us_cases = weekly_est_cases_deaths[['est_inf','new_cases_jhu']].groupby(weekly_est_cases_deaths['date']).sum()
+total_weekly_us_cases.reset_index(level=0, inplace=True)
+total_weekly_us_cases.replace(0, np.nan, inplace=True)   
+
+# data for state 1 charting
+df_for_display_state1_changed_names = df_for_display1[['date', 'new_cases_per_100k', 'est_inf_per_100k', 'test_positivity_rate', 'weekly_exposures']].copy()
+df_for_display_state1_changed_names.rename(columns={'date':'Date','new_cases_per_100k':'JHU Reported','est_inf_per_100k':'Est Actual Inf',
+                                                    'test_positivity_rate':'Test Positivity Rate', 'weekly_exposures':'Weekly Exposure Rate', 
+                                                    'density_cor_exposure':'Density Corrected Exposures'}, inplace=True)
+
+# data for state 2 charting
+df_for_display_state2_changed_names = df_for_display2[['date', 'new_cases_per_100k', 'est_inf_per_100k', 'test_positivity_rate', 'weekly_exposures']].copy()
+df_for_display_state2_changed_names.rename(columns={'date':'Date','new_cases_per_100k':'JHU Reported','est_inf_per_100k':'Est Actual Inf',
+                                                    'test_positivity_rate':'Test Positivity Rate', 'weekly_exposures':'Weekly Exposure Rate', 
+                                                    'density_cor_exposure':'Density Corrected Exposures'}, inplace=True)
+
+### melt data for exposures per week plotting
+df_exposure_data = weekly_est_cases_deaths[['date', 'state', 'weekly_exposures', 'density_cor_exposure']].copy()
+
+# for weekly exposures
+df_exposure_data_sel_states = df_exposure_data[(df_exposure_data['state'] == state_1_selected) | (df_exposure_data['state'] == state_2_selected)].copy()
+df_exposure_data_sel_states.dropna(inplace=True)
+df_exposure_data_sel_states_melt = pd.melt(df_exposure_data_sel_states, id_vars=['date','state'], value_vars = ['weekly_exposures']).sort_values(by=['date'])
+df_exposure_data_sel_states_melt.drop('variable', axis=1, inplace=True)
+df_exposure_data_sel_states_melt = df_exposure_data_sel_states_melt.rename(columns={'value':'exposures per week'})
+
+# for density corrected weekly exposures
+df_corr_exposure_data_sel_states = df_exposure_data[(df_exposure_data['state'] == state_1_selected) | (df_exposure_data['state'] == state_2_selected)].copy()
+df_corr_exposure_data_sel_states.dropna(inplace=True)
+df_corr_exposure_data_sel_states_melt = pd.melt(df_corr_exposure_data_sel_states, id_vars=['date','state'], value_vars = ['density_cor_exposure']).sort_values(by=['date'])
+df_corr_exposure_data_sel_states_melt.drop('variable', axis=1, inplace=True)
+df_corr_exposure_data_sel_states_melt = df_corr_exposure_data_sel_states_melt.rename(columns={'value':'density corrected exposures per week'})
+
 #=======================================================
-# chart plotting (altair chart that streamlit natively publishes)
+# chart plotting 
 #=======================================================
 
-# graph title
-cases_deaths_graph_title = 'Rolling 7-day Average of New Cases and Deaths per Day in ' + state_selected
+### Total Reported US Cases vs. Estimated Cases
 
-base = alt.Chart(df_for_display).encode(
-    alt.X('Date:T', axis=alt.Axis(title='Date'))).properties(
-        title=cases_deaths_graph_title
-    )
+# Chart title and legends
+x_axis_title_new_est_inf_100k =  'Date'
+y_axis_title_new_est_inf_100k =  'New Cases per 100K per Week'
 
-cases = base.mark_area(color='#858ce6').encode(
-    alt.Y('new_cases_rollavg:Q', 
-    axis=alt.Axis(title='7-day Rolling Avg of New Cases', titleColor='#858ce6'))
-)
+# State 1 Chart
+fig3 = px.line(total_weekly_us_cases, 
+             x="date", 
+             y=["new_cases_jhu", "est_inf"], 
+             title = f"Reported and Estimated New Cases per 100K in the US",
+             hover_name='date')
+fig3.update_yaxes(title_text=y_axis_title_new_est_inf_100k)
+fig3.update_xaxes(showgrid=True, title_text=x_axis_title_new_est_inf_100k)
+fig3.update_layout(
+    xaxis_tickformat = '%b<br>%Y')
 
-deaths = base.mark_area(color='#9c2927').encode(
-    alt.Y('new_deaths_rollavg:Q', 
-    axis=alt.Axis(title='7-day Rolling Avg of New Deaths', titleColor='#9c2927'),
-    scale=alt.Scale(domain=for_scaling))
-)
+st.plotly_chart(fig3, use_container_width=True)
 
-new = alt.layer(cases, deaths).resolve_scale(y='independent').configure_axisLeft(labelColor='#858ce6').configure_axisRight(labelColor='#9c2927')
+# Display of latest totals
+st.markdown('___')
+st.header(f'Total Percent of the US Population Estimated Infected to Date: **{percent_total_us_pop_est_infected}**')
+st.header(f'Total Percent of the US Population Reported Infected to Date: **{percent_total_us_pop_reported_infected}**')
+st.markdown('___')
+st.header('')
 
-st.altair_chart(new, use_container_width=True)
+# Proportion of the population infected to date
+st.header("Latest Estimated and Reported Percent of State's Infected to Date")
+dfStyler = proportion_pop_infected.style.set_properties(**{'font-size': '10pt',})\
+                                        .format({'Estimated Percent Infected':'{:.1%}','Reported Percent Infected':'{:.1%}'})
+st.dataframe(dfStyler)
 
+# Padding
+st.header('')
+st.markdown('___')
 
-# exposure index plots
-# https://github.com/altair-viz/altair/issues/968 - states use of long vs. wide form data is better and link to Altair explanation
+# title separating the total US data from the two state comparison graphs
+st.title('COVID-19 Data by US State')
+st.title('')   # padding to separate page title from graphs
 
+### Reported vs. Estimated Cases
 
-mob_chart = alt.Chart(df_mob_data_for_display).mark_line().encode(
-    x='Date',
-    y='value',
-    color='Posture'
-).properties(
-        title='Hypothetical Daily Exposure Index Based on Mobility and Non-pharmaceutical Interventions'
-    )
-st.altair_chart(mob_chart, use_container_width=True)
+# Chart title and legends
+x_axis_title_new_est_inf_100k =  'Date'
+y_axis_title_new_est_inf_100k =  'New Cases per 100K per Week'
 
-
-
-# example for plotting CDC excess deaths vs JHU reported deaths and correlation scatter chart of same
-# save this to use on a separate streamlit page (if necessary) for state level statistics 
-
-# plotting_reported_deaths = weekly_cases_deaths_xs[(weekly_cases_deaths_xs['state'] == state_selected)]
-
-# fig = px.bar(plotting_reported_deaths, 
-#              x="date", 
-#              y=["Excess Lower Estimate", "Excess Higher Estimate","new_deaths_jhu"], 
-#              barmode='group',
-#              title = f"Reported and Excess Deaths in {state_selected}")
-# fig.update_yaxes(title_text='Deaths')
-# st.plotly_chart(fig)
-
-# fig2 = px.scatter(plotting_reported_deaths, x='new_deaths_jhu', y=['Excess Lower Estimate','Excess Higher Estimate'], trendline='ols')
-# fig2.update_layout(title=state_selected)
-# fig2.update_yaxes(title_text='Mid Point Estimate of Excess Deaths')
-# fig2.update_xaxes(title_text='JHU Reported Deaths')
-# st.plotly_chart(fig2)
-
-
-
-
-df_est_cases = pd.read_csv("data/weekly_est_cases_deaths.csv")
-df_for_display2 = df_est_cases[df_est_cases.state.isin([state_selected])]
-df_for_display3 = df_for_display2[['date', 'new_cases_jhu', 'est_inf']].copy()
-df_for_display3.rename(columns={'date':'Week','new_cases_jhu':'JHU Reported','est_inf':'Est Actual Inf'}, inplace=True)
-
-fig3 = px.bar(df_for_display3, 
-             x="Week", 
+# State 1 Chart
+fig3 = px.line(df_for_display_state1_changed_names, 
+             x="Date", 
              y=["JHU Reported", "Est Actual Inf"], 
-             barmode='group',
-             title = f"Reported and Estimated New Cases in {state_selected}",
-             hover_name='Week')
-fig3.update_yaxes(title_text='New Cases')
-fig3.update_xaxes(showgrid=True)
+             title = f"Reported and Estimated New Cases per 100K in {state_1_selected}",
+             hover_name='Date')
+fig3.update_yaxes(title_text=y_axis_title_new_est_inf_100k)
+fig3.update_xaxes(showgrid=True, title_text=x_axis_title_new_est_inf_100k)
+fig3.update_layout(
+    xaxis_tickformat = '%b<br>%Y')
+
+st.plotly_chart(fig3, use_container_width=True)
+
+# State 2 Chart
+fig3 = px.line(df_for_display_state2_changed_names, 
+             x="Date", 
+             y=["JHU Reported", "Est Actual Inf"], 
+             title = f"Reported and Estimated New Cases per 100K in {state_2_selected}",
+             hover_name='Date')
+fig3.update_yaxes(title_text=y_axis_title_new_est_inf_100k)
+fig3.update_xaxes(showgrid=True, title_text=x_axis_title_new_est_inf_100k)
 fig3.update_layout(
     xaxis_tickformat = '%b<br>%Y')
 
 st.plotly_chart(fig3, use_container_width=True)
 
 
-# df_for_display4 = df_for_display3.copy()
-# df_for_display4.melt('Week', var_name='Source', value_name='Infections')
 
 
-# base = alt.Chart(df_for_display3).encode(
-#     x = 'Week:T', 
-#     y = 'Infections',
-#     color = 'Source'
-# )
+### estimated infections vs. test positivity rate
 
-# st.altair_chart(base, use_container_width=True)
+# graph title and labels for State 1
+inf_vs_positivity_title = f'Estimated Infections vs. Test Positivity Rate for {state_1_selected}'
+y_axis_2_title_inf_vs_positivity = 'Test Positivity Rate'
+
+# State 1 Chart
+base = alt.Chart(df_for_display_state1_changed_names).encode(
+    alt.X('Date:T', axis=alt.Axis(title=x_axis_title_new_est_inf_100k))).properties(
+        title=inf_vs_positivity_title
+    )
+
+cases = base.mark_area(color='#858ce6').encode(
+    alt.Y('Est Actual Inf:Q', 
+    axis=alt.Axis(title=y_axis_title_new_est_inf_100k, titleColor='#858ce6'))
+)
+
+positivity = base.mark_line(color='#9c2927').encode(
+    alt.Y('Test Positivity Rate:Q', 
+    axis=alt.Axis(title=y_axis_2_title_inf_vs_positivity, titleColor='#9c2927'),
+    scale=alt.Scale())
+)
+
+new = alt.layer(cases, positivity).resolve_scale(y='independent').configure_axisLeft(labelColor='#858ce6').configure_axisRight(labelColor='#9c2927')
+
+st.altair_chart(new, use_container_width=True)
+
+# graph title and labels for State 2
+inf_vs_positivity_title = f'Estimated Infections vs. Test Positivity Rate for {state_2_selected}'
+y_axis_2_title_inf_vs_positivity = 'Test Positivity Rate'
+
+# State 2 Chart
+base = alt.Chart(df_for_display_state2_changed_names).encode(
+    alt.X('Date:T', axis=alt.Axis(title=x_axis_title_new_est_inf_100k))).properties(
+        title=inf_vs_positivity_title
+    )
+
+cases = base.mark_area(color='#858ce6').encode(
+    alt.Y('Est Actual Inf:Q', 
+    axis=alt.Axis(title=y_axis_title_new_est_inf_100k, titleColor='#858ce6'))
+)
+
+positivity = base.mark_line(color='#9c2927').encode(
+    alt.Y('Test Positivity Rate:Q', 
+    axis=alt.Axis(title=y_axis_2_title_inf_vs_positivity, titleColor='#9c2927'),
+    scale=alt.Scale())
+)
+
+new = alt.layer(cases, positivity).resolve_scale(y='independent').configure_axisLeft(labelColor='#858ce6').configure_axisRight(labelColor='#9c2927')
+
+st.altair_chart(new, use_container_width=True)
 
 
+### Weekly Exposures State1 vs. State2
 
+# graph title and labels for State 1
+# Mobility = f'Estimated Infections vs. Test Positivity Rate for {state_1_selected}'
+# y_axis_2_title_inf_vs_positivity = 'Test Positivity Rate'
 
+# Exposures per Week Chart
+chart = alt.Chart(df_exposure_data_sel_states_melt).mark_line().encode(
+    x='date',
+    y='exposures per week',
+    color='state',
+).properties(title=f'Exposures per Week in {state_1_selected} vs. {state_2_selected}')
+st.altair_chart(chart, use_container_width=True)
 
+# # graph title and labels for State 1
+# Mobility = f'Estimated Infections vs. Test Positivity Rate for {state_1_selected}'
+# y_axis_2_title_inf_vs_positivity = 'Test Positivity Rate'
 
-# base = alt.Chart(df_for_display3).transform_fold(
-#     ['JHU Reported', 'Est Actual Inf'],
-#     as_=['info source', 'infections']
-# ).mark_bar(opacity=0.5).encode(
-#     x='Week:T',
-#     y=alt.Y('infections:Q', stack=None),
-#     color='info source:N'
-# )
-# st.altair_chart(base, use_container_width=True)
-
-
-
-##### reported and estimated cases that occured in the selected state - need to select the data
-# fig = px.bar(plotting_reported_deaths, x="date", y=["new_deaths_jhu", "corr_new_deaths"], 
-#              barmode='group',
-#              title = f"Reported and Estimated Deaths in {state_selected}")
-# fig.show()
+# Density Corrected Exposures per Week Chart
+chart = alt.Chart(df_corr_exposure_data_sel_states_melt).mark_line().encode(
+    x='date',
+    y='density corrected exposures per week',
+    color='state',
+).properties(title=f'Population Density Corrected Exposures per Week in {state_1_selected} vs. {state_2_selected}')
+st.altair_chart(chart, use_container_width=True)

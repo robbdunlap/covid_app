@@ -320,6 +320,15 @@ total_reported_infected = percent_pop_infected['sum_new_cases_jhu'].sum()
 percent_total_us_pop_est_infected = f"{100*total_infected/total_pop:.1f}"
 percent_total_us_pop_reported_infected = f"{100*total_reported_infected/total_pop:.1f}"
 
+# side quest - save the estimated and reported percent of total US pop infected to date to file for use by the display module
+file_path = 'data/estimated_percent_US_infected.txt'
+with open(file_path, 'w+') as filetowrite:
+    filetowrite.write(percent_total_us_pop_est_infected)
+
+file_path = 'data/reported_percent_US_infected.txt'
+with open(file_path, 'w+') as filetowrite:
+    filetowrite.write(percent_total_us_pop_reported_infected)
+
 # from https://worldpopulationreview.com/states/state-abbreviations
 state_abbrevs = pd.read_csv('data/state_abbrevs.csv')
 
