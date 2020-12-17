@@ -17,6 +17,7 @@ datetime = "*"
 seaborn = "*"
 requests = "*"
 bs4 = "*"
+vega-datasets = "*"
 
 [requires]
 python_version = "3.8"

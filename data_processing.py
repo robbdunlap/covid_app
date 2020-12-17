@@ -165,6 +165,12 @@ weekly_cases_deaths['new_deaths_jhu'] = weekly_cases_deaths['new_deaths_jhu'].as
 # delete the lastest week if it's not a complete week
 latest_date_of_jhu_data = daily_cases_deaths['date'].max()
 
+# side quest - save latest date of JHU data to file for use by the display module
+date_of_reporting = str(latest_date_of_jhu_data)[:10]
+file_path = 'data/latest_date_of_JHU_data.txt'
+with open(file_path, 'w+') as filetowrite:
+    filetowrite.write(date_of_reporting)
+
 # reset the index so 'date' is a column
 weekly_cases_deaths.reset_index(inplace=True)
 
@@ -342,6 +348,10 @@ print('-------------------------------------------------------------------------
 print(percent_pop_infected)
 print()
 print()
+
+# save proportion of population infected to date for the display module
+percent_pop_infected.drop(['sum_est_inf','sum_new_cases_jhu','state_id'], axis=1, inplace=True)
+percent_pop_infected.to_csv('data/proportion_pop_infected.csv',index=False)
 
 ###### end/calculating the estimated proportion of the population that has already been infected with COVID-19 ######
 
@@ -643,10 +653,6 @@ print('All Done!                                    ', end='\r')
 # write the data out in case it's useful for something else
 all_state_mob_data.to_csv("data/all_state_mob_data.csv", index=False)
 
-# extracting latest date of GMD data for informing the viewer how current the data is
-latest_date_of_GMD = all_state_mob_data.nlargest(1, 'date')
-most_recent_GMD_data = str(latest_date_of_GMD.values[0][0])[:10]
-
 # drop extraneous columns
 for_weekly_mob_calc = all_state_mob_data.drop(["groc_n_pharm_normal_exp_per_day", 
                                  "grocery_and_pharmacy_percent_change_from_baseline",
@@ -669,13 +675,18 @@ for_weekly_mob_calc = all_state_mob_data.drop(["groc_n_pharm_normal_exp_per_day"
 
 for_weekly_mob_calc['date'] =  pd.to_datetime(for_weekly_mob_calc['date'])
 
-# for_weekly_mob_calc.set_index('date', inplace=True)
-
 # sum the weekly mobility data, match the week starting date to the one used by the CDC
 weekly_mobility_data = for_weekly_mob_calc.groupby('sub_region_1').resample('W-SAT', on='date').sum()
-weekly_mobility_data.rename(columns={'normal_exposure_per_day':'weekly_expousres'}, inplace=True)
+weekly_mobility_data.rename(columns={'normal_exposure_per_day':'weekly_exposures'}, inplace=True)
 
+# extracting latest date of GMD data for informing the viewer how current the data is
 latest_date_of_GMD = for_weekly_mob_calc['date'].max()
+most_recent_GMD_data = str(latest_date_of_GMD)[:10]
+
+# save latest date of JHU data to file for use by the display module
+file_path = 'data/latest_date_of_GMD.txt'
+with open(file_path, 'w+') as filetowrite:
+    filetowrite.write(most_recent_GMD_data)
 
 weekly_mobility_data.reset_index(inplace=True)
 
@@ -690,12 +701,12 @@ if latest_date_of_GMD.weekday() != 5:
 def per_change_mobility_func(rows):
     # temporarily set panda options so that values with "divide by 0" are converted to nan instead of infinity
     with pd.option_context('mode.use_inf_as_na', True):
-        rows['pro_chg_weekly_expousres'] = (rows['weekly_expousres'] - rows['weekly_expousres'].shift(1)) / rows['weekly_expousres'].shift(1)    
+        rows['pro_chg_weekly_exposures'] = (rows['weekly_exposures'] - rows['weekly_exposures'].shift(1)) / rows['weekly_exposures'].shift(1)    
         return rows
 
 weekly_mobility_data = weekly_mobility_data.groupby('sub_region_1').apply(per_change_mobility_func)
 
-# merge the weekly_expousres data into the weekly_est_cases_deaths df
+# merge the weekly_exposures data into the weekly_est_cases_deaths df
 weekly_est_cases_deaths = weekly_est_cases_deaths.merge(weekly_mobility_data, left_on=['state','date'], right_on=['sub_region_1','date'], how='outer') 
 del weekly_est_cases_deaths['sub_region_1']
 weekly_est_cases_deaths.drop(weekly_est_cases_deaths[weekly_est_cases_deaths['date'] <= '2020-02-08' ].index, inplace=True)
@@ -703,19 +714,19 @@ weekly_est_cases_deaths.drop(weekly_est_cases_deaths[weekly_est_cases_deaths['da
 ###### end/add percent change in weekly exposures ######
 
 # density correction of exposure rate
-weekly_est_cases_deaths['density_cor_expousre'] = weekly_est_cases_deaths['weekly_expousres'] * weekly_est_cases_deaths['rho']
+weekly_est_cases_deaths['density_cor_exposure'] = weekly_est_cases_deaths['weekly_exposures'] * weekly_est_cases_deaths['rho']
 
 # calculate Psi
 prob_actual_exposure_to_disease = 0.01
 
 def add_psi(row):
-    if ((row['density_cor_expousre'] == 0) or (row['mobile_infectious'] == 0) or 
+    if ((row['density_cor_exposure'] == 0) or (row['mobile_infectious'] == 0) or 
         (row['rho'] == 0) or (row['est_inf'] == 0)):
         return np.nan
-    elif isnan(row['density_cor_expousre'] or row['mobile_infectious'] or row['rho'] or row['est_inf']):
+    elif isnan(row['density_cor_exposure'] or row['mobile_infectious'] or row['rho'] or row['est_inf']):
         return np.nan
     else:
-        psi = (row['est_inf']/(row['density_cor_expousre'] * row['mobile_infectious'] * prob_actual_exposure_to_disease))
+        psi = (row['est_inf']/(row['density_cor_exposure'] * row['mobile_infectious'] * prob_actual_exposure_to_disease))
         return psi
 
 weekly_est_cases_deaths["psi"] = weekly_est_cases_deaths.apply(add_psi, axis=1)
