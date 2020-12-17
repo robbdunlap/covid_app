@@ -753,6 +753,14 @@ weekly_est_cases_deaths["psi"] = weekly_est_cases_deaths.apply(add_psi, axis=1)
 
 
 test_positivity_df = pd.read_csv('data/covid_testing_data_filecovid-19_diagnostic_lab_testing.csv')
+latest_date_of_test_positivity_data = test_positivity_df['date'].max()
+
+# side quest - save latest date of Test Positivity data to file for use by the display module
+date_of_reporting = str(latest_date_of_test_positivity_data)
+file_path = 'data/latest_date_of_test_positivity_data.txt'
+with open(file_path, 'w+') as filetowrite:
+    filetowrite.write(date_of_reporting)
+
 total_test_df = test_positivity_df.groupby(['state_name', 'date']).sum()
 total_test_df.drop(total_test_df[['state_fips','total_results_reported']], axis=1, inplace=True)
 positive_tests_df = test_positivity_df[test_positivity_df['overall_outcome']== 'Positive'].copy()

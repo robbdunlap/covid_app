@@ -46,10 +46,13 @@ df_for_display2 = weekly_est_cases_deaths[weekly_est_cases_deaths.state.isin([st
 # grab the latest date of the JHU and GCMD to let the user know how fresh the data is
 file_path_JHU = 'data/latest_date_of_JHU_data.txt'
 file_path_GMD = 'data/latest_date_of_GMD.txt'
+file_path_HealthData = 'data/latest_date_of_test_positivity_data.txt'
 with open(file_path_JHU, 'r') as filetoread:
     latest_date_of_JHU_data = filetoread.read()
 with open(file_path_GMD, 'r') as filetoread:
     latest_date_of_GMD = filetoread.read()
+with open(file_path_HealthData, 'r') as filetoread:
+    latest_date_of_test_positivity_data = filetoread.read()
 
 # show latest date of data on the dashboard
 for i in range(1,11):     # padding
@@ -57,8 +60,12 @@ for i in range(1,11):     # padding
 st.sidebar.markdown(f'##### Data is from JHU dataset with {latest_date_of_JHU_data} being the latest date of data in the set')
 st.sidebar.markdown('##### https://github.com/CSSEGISandData/COVID-19') 
 st.sidebar.title('')       # padding 
+st.sidebar.markdown(f'##### Test positivity data is from HealthData.gov as of {latest_date_of_test_positivity_data}')
+st.sidebar.markdown('##### https://healthdata.gov/dataset/covid-19-diagnostic-laboratory-testing-pcr-testing-time-series')
+st.sidebar.title('')       # padding 
 st.sidebar.markdown(f'##### Mobility index is derived from Google Mobility Data as of {latest_date_of_GMD}')
 st.sidebar.markdown('##### https://www.google.com/covid19/mobility/index.html')
+
 
 # Total estimated US cases vs. reported in JHU data
 total_weekly_us_cases = weekly_est_cases_deaths[['est_inf','new_cases_jhu']].groupby(weekly_est_cases_deaths['date']).sum()
