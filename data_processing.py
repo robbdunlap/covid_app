@@ -23,6 +23,12 @@ xs_deaths['Week Ending Date'] =  pd.to_datetime(xs_deaths['Week Ending Date'])
 #capture the lastest date of the CDC data - used later for getting avg of most recent excess deaths
 latest_date_of_cdc_data = xs_deaths['Week Ending Date'].max()
 
+# side quest - save latest date of CDC Excess Deaths data to file for use by the display module
+date_of_reporting = str(latest_date_of_cdc_data)[:10]
+file_path = 'data/latest_date_of_excess_deaths_data.txt'
+with open(file_path, 'w+') as filetowrite:
+    filetowrite.write(date_of_reporting)
+
 # Drop PR and the "all US" data
 indexNames = xs_deaths[ (xs_deaths['State'] == 'Puerto Rico') | 
                         (xs_deaths['State'] == 'United States')].index

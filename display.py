@@ -10,10 +10,6 @@ import matplotlib.dates as mdates
 from matplotlib.dates import SU
 import numpy as np
 
-# title the page
-st.title('COVID-19 Data in the US')
-st.title('')   # padding to separate page title from graphs
-
 # import data files
 weekly_est_cases_deaths = pd.read_csv("data/weekly_est_cases_deaths.csv")
 weekly_est_cases_deaths['date'] =  pd.to_datetime(weekly_est_cases_deaths['date'])
@@ -34,37 +30,68 @@ with open(file_path, 'r') as filetoread:
 # grab a list of the states'/territories' names fromt the df so that streamlit can display a drop-down selector 
 states = weekly_est_cases_deaths.state.unique()
 
-# streamlit selectbox for selecting which state to plot
-st.sidebar.markdown('### Choose 2 States to Compare')
-state_1_selected = st.sidebar.selectbox('Select state 1 of interest', states, index=(46))
-state_2_selected = st.sidebar.selectbox('Select state 2 of interest', states, index=(20))
-
-# subselect the data for the selected state from the dataframe
-df_for_display1 = weekly_est_cases_deaths[weekly_est_cases_deaths.state.isin([state_1_selected])]
-df_for_display2 = weekly_est_cases_deaths[weekly_est_cases_deaths.state.isin([state_2_selected])]
-
 # grab the latest date of the JHU and GCMD to let the user know how fresh the data is
 file_path_JHU = 'data/latest_date_of_JHU_data.txt'
 file_path_GMD = 'data/latest_date_of_GMD.txt'
 file_path_HealthData = 'data/latest_date_of_test_positivity_data.txt'
+file_path_CDC = 'data/latest_date_of_excess_deaths_data.txt'
+file_path_explainer_text = 'data/est_deaths_calc_explanation.txt'
+file_path_exposure_explainer_text = 'data/explanation_of_exposure_calc.txt'
+
 with open(file_path_JHU, 'r') as filetoread:
     latest_date_of_JHU_data = filetoread.read()
 with open(file_path_GMD, 'r') as filetoread:
     latest_date_of_GMD = filetoread.read()
 with open(file_path_HealthData, 'r') as filetoread:
     latest_date_of_test_positivity_data = filetoread.read()
+with open(file_path_CDC, 'r') as filetoread:
+    latest_date_of_excess_deaths_data = filetoread.read()
+with open(file_path_explainer_text, 'r') as filetoread:
+    est_deaths_calc_explanation = filetoread.read()
+with open(file_path_exposure_explainer_text, 'r') as filetoread:
+    est_exposures_calc_explanation = filetoread.read()
+
+
+# title the page
+st.title('COVID-19 Data in the US')
+st.title('')   # padding to separate page title from graphs
+
+# streamlit selectbox for selecting which state to plot
+st.sidebar.title('Choose 2 States to Compare')
+state_1_selected = st.sidebar.selectbox('Select state of interest #1', states, index=(46))
+state_2_selected = st.sidebar.selectbox('Select state of interest #2', states, index=(20))
+
+# subselect the data for the selected state from the dataframe
+df_for_display1 = weekly_est_cases_deaths[weekly_est_cases_deaths.state.isin([state_1_selected])]
+df_for_display2 = weekly_est_cases_deaths[weekly_est_cases_deaths.state.isin([state_2_selected])]
+
+st.markdown(est_deaths_calc_explanation)
+    
 
 # show latest date of data on the dashboard
-for i in range(1,11):     # padding
+for i in range(1,4):     # padding
     st.sidebar.title('')   
-st.sidebar.markdown(f'##### Data is from JHU dataset with {latest_date_of_JHU_data} being the latest date of data in the set')
-st.sidebar.markdown('##### https://github.com/CSSEGISandData/COVID-19') 
-st.sidebar.title('')       # padding 
-st.sidebar.markdown(f'##### Test positivity data is from HealthData.gov as of {latest_date_of_test_positivity_data}')
-st.sidebar.markdown('##### https://healthdata.gov/dataset/covid-19-diagnostic-laboratory-testing-pcr-testing-time-series')
-st.sidebar.title('')       # padding 
-st.sidebar.markdown(f'##### Mobility index is derived from Google Mobility Data as of {latest_date_of_GMD}')
-st.sidebar.markdown('##### https://www.google.com/covid19/mobility/index.html')
+
+st.sidebar.title('Data Sources and Currency')
+st.sidebar.markdown('[Reported COVID infections and deaths] \
+                    (https://github.com/CSSEGISandData/COVID-19) \
+                     is from JHU dataset as of:')
+st.sidebar.markdown(f'**{latest_date_of_JHU_data}**')
+
+st.sidebar.markdown('[Test positivity data] \
+                    (https://healthdata.gov/dataset/covid-19-diagnostic-laboratory-testing-pcr-testing-time-series) \
+                     is from HealthData.gov as of:')
+st.sidebar.markdown(f'**{latest_date_of_test_positivity_data}**')
+
+st.sidebar.markdown('[Excess deaths in US data] \
+                    (https://www.cdc.gov/nchs/nvss/vsrr/covid19/excess_deaths.htm) \
+                     from the CDC as of:')
+st.sidebar.markdown(f'**{latest_date_of_excess_deaths_data}**')
+
+st.sidebar.markdown('Mobility index is derived from [Google Mobility Data] \
+                    (https://www.google.com/covid19/mobility/index.html) \
+                     as of:')
+st.sidebar.markdown(f'**{latest_date_of_GMD}**')
 
 
 # Total estimated US cases vs. reported in JHU data
@@ -107,6 +134,13 @@ df_corr_exposure_data_sel_states_melt = df_corr_exposure_data_sel_states_melt.re
 
 ### Total Reported US Cases vs. Estimated Cases
 
+# Display of latest totals
+st.markdown('___')
+st.header(f'Total Percent of the US Population Reported Infected to Date: **{percent_total_us_pop_reported_infected}**')
+st.header(f'Total Percent of the US Population Estimated Infected to Date: **{percent_total_us_pop_est_infected}**')
+st.markdown('___')
+#st.header('')
+
 # Chart title and legends
 x_axis_title_new_est_inf_100k =  'Date'
 y_axis_title_new_est_inf_100k =  'New Cases per 100K per Week'
@@ -115,7 +149,7 @@ y_axis_title_new_est_inf_100k =  'New Cases per 100K per Week'
 fig3 = px.line(total_weekly_us_cases, 
              x="date", 
              y=["new_cases_jhu", "est_inf"], 
-             title = f"Reported and Estimated New Cases per 100K in the US",
+             title = f"<b>Reported and Estimated New Cases per 100K in the US</b>",
              hover_name='date')
 fig3.update_yaxes(title_text=y_axis_title_new_est_inf_100k)
 fig3.update_xaxes(showgrid=True, title_text=x_axis_title_new_est_inf_100k)
@@ -124,15 +158,10 @@ fig3.update_layout(
 
 st.plotly_chart(fig3, use_container_width=True)
 
-# Display of latest totals
-st.markdown('___')
-st.header(f'Total Percent of the US Population Estimated Infected to Date: **{percent_total_us_pop_est_infected}**')
-st.header(f'Total Percent of the US Population Reported Infected to Date: **{percent_total_us_pop_reported_infected}**')
-st.markdown('___')
-st.header('')
+
 
 # Proportion of the population infected to date
-st.header("Latest Estimated and Reported Percent of State's Infected to Date")
+st.header("**Latest Estimated and Reported Percent of State's Infected to Date**")
 dfStyler = proportion_pop_infected.style.set_properties(**{'font-size': '10pt',})\
                                         .format({'Estimated Percent Infected':'{:.1%}','Reported Percent Infected':'{:.1%}'})
 st.dataframe(dfStyler)
@@ -234,6 +263,10 @@ st.altair_chart(new, use_container_width=True)
 
 
 ### Weekly Exposures State1 vs. State2
+
+st.markdown('___')
+st.markdown(est_exposures_calc_explanation)
+st.header('')
 
 # graph title and labels for State 1
 # Mobility = f'Estimated Infections vs. Test Positivity Rate for {state_1_selected}'

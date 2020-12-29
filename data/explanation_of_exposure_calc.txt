@@ -1,0 +1,10 @@
+Estimating daily exposure rates for individuals has been greatly facilitated by the advent of mobile device location reporting. Google’s Community Mobility Report (Google, 2020) reports the average amount of time people in each state in the US spend in one of six different activity bins:
+
+- Grocery and pharmacy
+- Parks
+- Transit stations
+- Retail and recreation
+- Residential
+- Workplaces
+
+This information, in conjunction with estimates of the rate of close contact with other individuals in those activity bins, allows the estimation of the number of times a day a person comes into close proximity with an infected person or contaminated objects.
