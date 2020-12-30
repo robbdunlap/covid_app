@@ -122,14 +122,14 @@ df_exposure_data_sel_states = df_exposure_data[(df_exposure_data['state'] == sta
 df_exposure_data_sel_states.dropna(inplace=True)
 df_exposure_data_sel_states_melt = pd.melt(df_exposure_data_sel_states, id_vars=['date','state'], value_vars = ['weekly_exposures']).sort_values(by=['date'])
 df_exposure_data_sel_states_melt.drop('variable', axis=1, inplace=True)
-df_exposure_data_sel_states_melt = df_exposure_data_sel_states_melt.rename(columns={'value':'exposures per week'})
+df_exposure_data_sel_states_melt = df_exposure_data_sel_states_melt.rename(columns={'value':'Exposures per week'})
 
 # for density corrected weekly exposures
 df_corr_exposure_data_sel_states = df_exposure_data[(df_exposure_data['state'] == state_1_selected) | (df_exposure_data['state'] == state_2_selected)].copy()
 df_corr_exposure_data_sel_states.dropna(inplace=True)
 df_corr_exposure_data_sel_states_melt = pd.melt(df_corr_exposure_data_sel_states, id_vars=['date','state'], value_vars = ['density_cor_exposure']).sort_values(by=['date'])
 df_corr_exposure_data_sel_states_melt.drop('variable', axis=1, inplace=True)
-df_corr_exposure_data_sel_states_melt = df_corr_exposure_data_sel_states_melt.rename(columns={'value':'density corrected exposures per week'})
+df_corr_exposure_data_sel_states_melt = df_corr_exposure_data_sel_states_melt.rename(columns={'value':'Density corrected exposures per week'})
 
 #=======================================================
 # chart plotting 
@@ -152,6 +152,7 @@ y_axis_title_new_est_inf_100k =  'New Cases per 100K per Week'
 fig1 = px.line(total_weekly_us_cases, 
              x="Date", 
              y=["JHU Reported Infections", "Estimated Actual Infections"], 
+             labels={"variable":"Data Source"},
              title = f"<b>Reported and Estimated New Cases per 100K in the US</b>")
 fig1.update_yaxes(title_text=y_axis_title_new_est_inf_100k)
 fig1.update_xaxes(showgrid=True, title_text=x_axis_title_new_est_inf_100k)
@@ -188,6 +189,7 @@ fig2 = px.line(df_for_display_state1_changed_names,
              x="Date", 
              y=["JHU Reported", "Est Actual Inf"], 
              title = f"Reported and Estimated New Cases per 100K in {state_1_selected}",
+             labels={"variable":"Data Source"},
              hover_name='Date')
 fig2.update_yaxes(title_text=y_axis_title_new_est_inf_100k)
 fig2.update_xaxes(showgrid=True, title_text=x_axis_title_new_est_inf_100k)
@@ -201,6 +203,7 @@ fig3 = px.line(df_for_display_state2_changed_names,
              x="Date", 
              y=["JHU Reported", "Est Actual Inf"], 
              title = f"Reported and Estimated New Cases per 100K in {state_2_selected}",
+             labels={"variable":"Data Source"},
              hover_name='Date')
 fig3.update_yaxes(title_text=y_axis_title_new_est_inf_100k)
 fig3.update_xaxes(showgrid=True, title_text=x_axis_title_new_est_inf_100k)
@@ -277,8 +280,8 @@ st.header('')
 
 # Exposures per Week Chart
 chart = alt.Chart(df_exposure_data_sel_states_melt).mark_line().encode(
-    x='date',
-    y='exposures per week',
+    x=alt.X('date', axis=alt.Axis(title='Date')),
+    y='Exposures per week',
     color='state',
 ).properties(title=f'Exposures per Week in {state_1_selected} vs. {state_2_selected}')
 st.altair_chart(chart, use_container_width=True)
@@ -289,8 +292,8 @@ st.altair_chart(chart, use_container_width=True)
 
 # Density Corrected Exposures per Week Chart
 chart = alt.Chart(df_corr_exposure_data_sel_states_melt).mark_line().encode(
-    x='date',
-    y='density corrected exposures per week',
+    x=alt.X('date', axis=alt.Axis(title='Date')),
+    y='Density corrected exposures per week',
     color='state',
 ).properties(title=f'Population Density Corrected Exposures per Week in {state_1_selected} vs. {state_2_selected}')
 st.altair_chart(chart, use_container_width=True)
