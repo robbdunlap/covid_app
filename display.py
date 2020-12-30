@@ -5,7 +5,7 @@ from datetime import datetime
 import streamlit as st
 import altair as alt
 import plotly.express as px
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.dates import SU
 import numpy as np

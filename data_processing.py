@@ -744,6 +744,8 @@ def add_psi(row):
 
 weekly_est_cases_deaths["psi"] = weekly_est_cases_deaths.apply(add_psi, axis=1)
 
+# infectious encounters per week
+weekly_est_cases_deaths['enc_w_inf'] = weekly_est_cases_deaths['density_cor_exposure'] * weekly_est_cases_deaths['phi']
 
 ############ end/create exposure index using google mobility data ###################
 
