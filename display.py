@@ -162,7 +162,7 @@ st.plotly_chart(fig1, use_container_width=True)
 st.markdown(est_deaths_calc_explanation)
 
 # Proportion of the population infected to date
-st.header("**Latest Estimated and Reported Percent of State's Infected to Date**")
+st.header("**Latest Estimated vs Reported Percent of Each State's Population Infected to Date**")
 dfStyler = proportion_pop_infected.style.set_properties(**{'font-size': '10pt',})\
                                         .format({'Estimated Percent Infected':'{:.1%}','Reported Percent Infected':'{:.1%}'})
 st.dataframe(dfStyler)
