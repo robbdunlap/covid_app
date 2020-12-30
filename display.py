@@ -133,7 +133,7 @@ df_corr_encounters_w_infectious_data_sel_states = df_exposure_data[(df_exposure_
 df_corr_encounters_w_infectious_data_sel_states.dropna(inplace=True)
 df_corr_encounters_w_infectious_data_sel_states_melt = pd.melt(df_corr_encounters_w_infectious_data_sel_states, id_vars=['date','state'], value_vars = ['enc_w_inf']).sort_values(by=['date'])
 df_corr_encounters_w_infectious_data_sel_states_melt.drop('variable', axis=1, inplace=True)
-df_corr_encounters_w_infectious_data_sel_states_melt = df_corr_encounters_w_infectious_data_sel_states_melt.rename(columns={'value':'Density corrected infectious encounters per week'})
+df_corr_encounters_w_infectious_data_sel_states_melt = df_corr_encounters_w_infectious_data_sel_states_melt.rename(columns={'value':'Infectious encounters per week'})
 
 #=======================================================
 # chart plotting 
@@ -291,10 +291,6 @@ chart = alt.Chart(df_exposure_data_sel_states_melt).mark_line().encode(
 ).properties(title=f'Potential Exposures per Week in {state_1_selected} vs. {state_2_selected}')
 st.altair_chart(chart, use_container_width=True)
 
-# # graph title and labels for State 1
-# Mobility = f'Estimated Infections vs. Test Positivity Rate for {state_1_selected}'
-# y_axis_2_title_inf_vs_positivity = 'Test Positivity Rate'
-
 # Density Corrected Exposures per Week Chart
 chart = alt.Chart(df_corr_exposure_data_sel_states_melt).mark_line().encode(
     x=alt.X('date', axis=alt.Axis(title='Date')),
@@ -303,10 +299,12 @@ chart = alt.Chart(df_corr_exposure_data_sel_states_melt).mark_line().encode(
 ).properties(title=f'Population Density Corrected Potential Exposures per Week in {state_1_selected} vs. {state_2_selected}')
 st.altair_chart(chart, use_container_width=True)
 
+st.markdown('')
+
 # Density Corrected Ecounters with Infectious per Week Chart
-chart = alt.Chart(df_corr_encounters_w_infectious_data_sel_states).mark_line().encode(
+chart = alt.Chart(df_corr_encounters_w_infectious_data_sel_states_melt).mark_line().encode(
     x=alt.X('date', axis=alt.Axis(title='Date')),
-    y='Density corrected infectious encounters per week',
+    y='Infectious encounters per week',
     color='state',
-).properties(title=f'Population Density Corrected Encounters with Infectious People per Week in {state_1_selected} vs. {state_2_selected}')
+).properties(title=f'Estimated Encounters with Infectious People per Week in {state_1_selected} vs. {state_2_selected}')
 st.altair_chart(chart, use_container_width=True)
