@@ -53,7 +53,7 @@ with open(file_path_exposure_explainer_text, 'r') as filetoread:
 
 
 # title the page
-st.title('COVID-19 Data in the US')
+st.title('Estimating COVID-19 Prevalence in the US')
 st.title('')   # padding to separate page title from graphs
 
 # streamlit selectbox for selecting which state to plot
@@ -64,9 +64,6 @@ state_2_selected = st.sidebar.selectbox('Select state of interest #2', states, i
 # subselect the data for the selected state from the dataframe
 df_for_display1 = weekly_est_cases_deaths[weekly_est_cases_deaths.state.isin([state_1_selected])]
 df_for_display2 = weekly_est_cases_deaths[weekly_est_cases_deaths.state.isin([state_2_selected])]
-
-st.markdown(est_deaths_calc_explanation)
-    
 
 # show latest date of data on the dashboard
 for i in range(1,4):     # padding
@@ -143,6 +140,8 @@ st.header(f'Total Percent of the US Population Reported Infected to Date: **{per
 st.header(f'Total Percent of the US Population Estimated Infected to Date: **{percent_total_us_pop_est_infected}**')
 st.markdown('___')
 #st.header('')
+
+st.markdown(est_deaths_calc_explanation)
 
 # Chart title and legends
 x_axis_title_new_est_inf_100k =  'Date'
