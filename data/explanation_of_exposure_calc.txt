@@ -7,4 +7,4 @@ Estimating daily exposure rates for individuals has been greatly facilitated by 
 - Residential
 - Workplaces
 
-This information, in conjunction with estimates of the rate of close contact with other individuals in those activity bins, allows the estimation of the number of times a day a person comes into close proximity with an infected person or contaminated objects.
+This information, in conjunction with estimates of the rate of close contact with other individuals in those activity bins, allows the estimation of the number of times a day a person could come into close proximity with an infected person or contaminated objects.
