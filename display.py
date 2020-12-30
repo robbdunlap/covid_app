@@ -279,7 +279,7 @@ st.header('')
 # Exposures per Week Chart
 chart = alt.Chart(df_exposure_data_sel_states_melt).mark_line().encode(
     x=alt.X('date', axis=alt.Axis(title='Date')),
-    y='Exposures per week',
+    y='Potential Exposures per week',
     color='state',
 ).properties(title=f'Potential Exposures per Week in {state_1_selected} vs. {state_2_selected}')
 st.altair_chart(chart, use_container_width=True)
@@ -291,7 +291,7 @@ st.altair_chart(chart, use_container_width=True)
 # Density Corrected Exposures per Week Chart
 chart = alt.Chart(df_corr_exposure_data_sel_states_melt).mark_line().encode(
     x=alt.X('date', axis=alt.Axis(title='Date')),
-    y='Density corrected exposures per week',
+    y='Density corrected pot exp per week',
     color='state',
 ).properties(title=f'Population Density Corrected Potential Exposures per Week in {state_1_selected} vs. {state_2_selected}')
 st.altair_chart(chart, use_container_width=True)
