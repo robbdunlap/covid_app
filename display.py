@@ -299,10 +299,16 @@ chart = alt.Chart(df_corr_exposure_data_sel_states_melt).mark_line().encode(
 ).properties(title=f'Population Density Corrected Potential Exposures per Week in {state_1_selected} vs. {state_2_selected}')
 st.altair_chart(chart, use_container_width=True)
 
+
+
 # Density Corrected Ecounters with Infectious per Week Chart
+# title is too long for graph so putting it in as markdown instead
+title_for_graph = f'Estimated # of Encounters with Someone Infectious Per Person Per Week in {state_1_selected} vs. {state_2_selected}'
+st.markdown(**title_for_graph**)
+
 chart = alt.Chart(df_corr_encounters_w_infectious_data_sel_states_melt).mark_line().encode(
     x=alt.X('date', axis=alt.Axis(title='Date')),
     y='Infectious encounters per week',
     color='state',
-).properties(title=f'Estimated # of Encounters with Someone Infectious Per Person Per Week in {state_1_selected} vs. {state_2_selected}')
+)
 st.altair_chart(chart, use_container_width=True)
