@@ -97,7 +97,10 @@ st.sidebar.markdown(f'**{latest_date_of_GMD}**')
 # Total estimated US cases vs. reported in JHU data
 total_weekly_us_cases = weekly_est_cases_deaths[['est_inf','new_cases_jhu']].groupby(weekly_est_cases_deaths['date']).sum()
 total_weekly_us_cases.reset_index(level=0, inplace=True)
-total_weekly_us_cases.replace(0, np.nan, inplace=True)   
+total_weekly_us_cases[['est_inf','new_cases_jhu']] = total_weekly_us_cases[['est_inf','new_cases_jhu']].fillna(0)
+total_weekly_us_cases['est_inf'] = total_weekly_us_cases['est_inf'].astype(int)
+total_weekly_us_cases.replace(0, np.nan, inplace=True) 
+total_weekly_us_cases.rename(columns={'date': 'Date', 'new_cases_jhu': 'JHU Reported Infections', 'est_inf': 'Estimated Actual Infections'}, inplace=True)
 
 # data for state 1 charting
 df_for_display_state1_changed_names = df_for_display1[['date', 'new_cases_per_100k', 'est_inf_per_100k', 'test_positivity_rate', 'weekly_exposures']].copy()
@@ -146,17 +149,17 @@ x_axis_title_new_est_inf_100k =  'Date'
 y_axis_title_new_est_inf_100k =  'New Cases per 100K per Week'
 
 # State 1 Chart
-fig3 = px.line(total_weekly_us_cases, 
-             x="date", 
-             y=["new_cases_jhu", "est_inf"], 
-             title = f"<b>Reported and Estimated New Cases per 100K in the US</b>",
-             hover_name='date')
-fig3.update_yaxes(title_text=y_axis_title_new_est_inf_100k)
-fig3.update_xaxes(showgrid=True, title_text=x_axis_title_new_est_inf_100k)
-fig3.update_layout(
+fig1 = px.line(total_weekly_us_cases, 
+             x="Date", 
+             y=["JHU Reported Infections", "Estimated Actual Infections"], 
+             title = f"<b>Reported and Estimated New Cases per 100K in the US</b>")
+fig1.update_yaxes(title_text=y_axis_title_new_est_inf_100k)
+fig1.update_xaxes(showgrid=True, title_text=x_axis_title_new_est_inf_100k)
+fig1.update_layout(
     xaxis_tickformat = '%b<br>%Y')
+fig1.update_traces(hovertemplate=None, hoverinfo='skip')
 
-st.plotly_chart(fig3, use_container_width=True)
+st.plotly_chart(fig1, use_container_width=True)
 
 
 
@@ -181,17 +184,17 @@ x_axis_title_new_est_inf_100k =  'Date'
 y_axis_title_new_est_inf_100k =  'New Cases per 100K per Week'
 
 # State 1 Chart
-fig3 = px.line(df_for_display_state1_changed_names, 
+fig2 = px.line(df_for_display_state1_changed_names, 
              x="Date", 
              y=["JHU Reported", "Est Actual Inf"], 
              title = f"Reported and Estimated New Cases per 100K in {state_1_selected}",
              hover_name='Date')
-fig3.update_yaxes(title_text=y_axis_title_new_est_inf_100k)
-fig3.update_xaxes(showgrid=True, title_text=x_axis_title_new_est_inf_100k)
-fig3.update_layout(
+fig2.update_yaxes(title_text=y_axis_title_new_est_inf_100k)
+fig2.update_xaxes(showgrid=True, title_text=x_axis_title_new_est_inf_100k)
+fig2.update_layout(
     xaxis_tickformat = '%b<br>%Y')
 
-st.plotly_chart(fig3, use_container_width=True)
+st.plotly_chart(fig2, use_container_width=True)
 
 # State 2 Chart
 fig3 = px.line(df_for_display_state2_changed_names, 
