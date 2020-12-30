@@ -112,7 +112,7 @@ df_for_display_state2_changed_names.rename(columns={'date':'Date','new_cases_per
                                                     'density_cor_exposure':'Density Corrected Exposures'}, inplace=True)
 
 ### melt data for exposures per week plotting
-df_exposure_data = weekly_est_cases_deaths[['date', 'state', 'weekly_exposures', 'density_cor_exposure']].copy()
+df_exposure_data = weekly_est_cases_deaths[['date', 'state', 'weekly_exposures', 'density_cor_exposure', 'enc_w_inf']].copy()
 
 # for weekly exposures
 df_exposure_data_sel_states = df_exposure_data[(df_exposure_data['state'] == state_1_selected) | (df_exposure_data['state'] == state_2_selected)].copy()
@@ -127,6 +127,13 @@ df_corr_exposure_data_sel_states.dropna(inplace=True)
 df_corr_exposure_data_sel_states_melt = pd.melt(df_corr_exposure_data_sel_states, id_vars=['date','state'], value_vars = ['density_cor_exposure']).sort_values(by=['date'])
 df_corr_exposure_data_sel_states_melt.drop('variable', axis=1, inplace=True)
 df_corr_exposure_data_sel_states_melt = df_corr_exposure_data_sel_states_melt.rename(columns={'value':'Density corrected exposures per week'})
+
+# for density corrected weekly encounters with infectious
+df_corr_encounters_w_infectious_data_sel_states = df_exposure_data[(df_exposure_data['state'] == state_1_selected) | (df_exposure_data['state'] == state_2_selected)].copy()
+df_corr_encounters_w_infectious_data_sel_states.dropna(inplace=True)
+df_corr_encounters_w_infectious_data_sel_states_melt = pd.melt(df_corr_encounters_w_infectious_data_sel_states, id_vars=['date','state'], value_vars = ['enc_w_inf']).sort_values(by=['date'])
+df_corr_encounters_w_infectious_data_sel_states_melt.drop('variable', axis=1, inplace=True)
+df_corr_encounters_w_infectious_data_sel_states_melt = df_corr_encounters_w_infectious_data_sel_states_melt.rename(columns={'value':'Density corrected infectious encounters per week'})
 
 #=======================================================
 # chart plotting 
@@ -294,4 +301,12 @@ chart = alt.Chart(df_corr_exposure_data_sel_states_melt).mark_line().encode(
     y='Density corrected exposures per week',
     color='state',
 ).properties(title=f'Population Density Corrected Potential Exposures per Week in {state_1_selected} vs. {state_2_selected}')
+st.altair_chart(chart, use_container_width=True)
+
+# Density Corrected Ecounters with Infectious per Week Chart
+chart = alt.Chart(df_corr_encounters_w_infectious_data_sel_states).mark_line().encode(
+    x=alt.X('date', axis=alt.Axis(title='Date')),
+    y='Density corrected infectious encounters per week',
+    color='state',
+).properties(title=f'Population Density Corrected Encounters with Infectious People per Week in {state_1_selected} vs. {state_2_selected}')
 st.altair_chart(chart, use_container_width=True)
