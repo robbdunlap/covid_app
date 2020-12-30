@@ -170,6 +170,7 @@ dfStyler = proportion_pop_infected.style.set_properties(**{'font-size': '10pt',}
                                         .format({'Estimated Percent Infected':'{:.1%}','Reported Percent Infected':'{:.1%}'})
 st.dataframe(dfStyler)
 
+
 # Padding
 st.header('')
 st.markdown('___')
