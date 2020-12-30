@@ -141,8 +141,6 @@ st.header(f'Total Percent of the US Population Estimated Infected to Date: **{pe
 st.markdown('___')
 #st.header('')
 
-st.markdown(est_deaths_calc_explanation)
-
 # Chart title and legends
 x_axis_title_new_est_inf_100k =  'Date'
 y_axis_title_new_est_inf_100k =  'New Cases per 100K per Week'
@@ -161,7 +159,7 @@ fig1.update_traces(hovertemplate=None, hoverinfo='skip')
 
 st.plotly_chart(fig1, use_container_width=True)
 
-
+st.markdown(est_deaths_calc_explanation)
 
 # Proportion of the population infected to date
 st.header("**Latest Estimated and Reported Percent of State's Infected to Date**")
