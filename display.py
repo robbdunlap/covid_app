@@ -306,5 +306,5 @@ chart = alt.Chart(df_corr_encounters_w_infectious_data_sel_states_melt).mark_lin
     x=alt.X('date', axis=alt.Axis(title='Date')),
     y='Infectious encounters per week',
     color='state',
-).properties(title=f'Estimated Encounters with Infectious People per Week in {state_1_selected} vs. {state_2_selected}')
+).properties(title=f'Estimated # of Encounters with Someone Infectious Per Person Per Week in {state_1_selected} vs. {state_2_selected}')
 st.altair_chart(chart, use_container_width=True)
