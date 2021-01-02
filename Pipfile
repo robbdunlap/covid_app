@@ -18,6 +18,7 @@ seaborn = "*"
 requests = "*"
 bs4 = "*"
 vega-datasets = "*"
+sklearn = "*"
 
 [requires]
 python_version = "3.8"
