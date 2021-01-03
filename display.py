@@ -13,6 +13,7 @@ import numpy as np
 # import data files
 weekly_est_cases_deaths = pd.read_csv("data/weekly_est_cases_deaths.csv")
 weekly_est_cases_deaths['date'] =  pd.to_datetime(weekly_est_cases_deaths['date'])
+weekly_inf_encounters = pd.read_csv('data/weekly_inf_encounters.csv')
 
 # import proportion of population infected to date
 proportion_pop_infected = pd.read_csv("data/proportion_pop_infected.csv", usecols=['state','est_proportion_infected','rep_proportion_infected'])
@@ -313,3 +314,31 @@ chart = alt.Chart(df_corr_encounters_w_infectious_data_sel_states_melt).mark_lin
     color='state',
 )
 st.altair_chart(chart, use_container_width=True)
+
+
+### Weekly Exposures vs Weekly Cases
+
+# graph title and labels for State 1
+exp_vs_infections_title = f'Estimated Infections vs. Test Positivity Rate for {state_1_selected}'
+y_axis_2_title_inf_vs_positivity = 'Test Positivity Rate'
+
+# State 1 Chart
+base = alt.Chart(df_for_display_state1_changed_names).encode(
+    alt.X('Date:T', axis=alt.Axis(title=x_axis_title_new_est_inf_100k))).properties(
+        title=inf_vs_positivity_title
+    )
+
+cases = base.mark_area(color='#858ce6').encode(
+    alt.Y('Est Actual Inf:Q', 
+    axis=alt.Axis(title=y_axis_title_new_est_inf_100k, titleColor='#858ce6'))
+)
+
+positivity = base.mark_line(color='#9c2927').encode(
+    alt.Y('Test Positivity Rate:Q', 
+    axis=alt.Axis(title=y_axis_2_title_inf_vs_positivity, titleColor='#9c2927'),
+    scale=alt.Scale())
+)
+
+new = alt.layer(cases, positivity).resolve_scale(y='independent').configure_axisLeft(labelColor='#858ce6').configure_axisRight(labelColor='#9c2927')
+
+st.altair_chart(new, use_container_width=True)
