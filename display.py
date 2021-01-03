@@ -13,7 +13,6 @@ import numpy as np
 # import data files
 weekly_est_cases_deaths = pd.read_csv("data/weekly_est_cases_deaths.csv")
 weekly_est_cases_deaths['date'] =  pd.to_datetime(weekly_est_cases_deaths['date'])
-weekly_inf_encounters = pd.read_csv('data/weekly_inf_encounters.csv')
 
 # import proportion of population infected to date
 proportion_pop_infected = pd.read_csv("data/proportion_pop_infected.csv", usecols=['state','est_proportion_infected','rep_proportion_infected'])
