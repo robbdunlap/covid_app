@@ -8,7 +8,7 @@
 import pandas as pd
 import os
 import requests
-from bs4 import BeautifulSoup
+#from bs4 import BeautifulSoup
 
 os.makedirs("data", exist_ok=True)
 
