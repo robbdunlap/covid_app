@@ -150,7 +150,7 @@ st.markdown('___')
 
 # Chart title and legends
 x_axis_title_new_est_inf_100k =  'Date'
-y_axis_title_new_est_inf_100k =  'New Cases per 100K per Week'
+y_axis_title_new_est_inf_100k =  'New Cases per Week'
 
 # State 1 Chart
 fig1 = px.line(total_weekly_us_cases, 
