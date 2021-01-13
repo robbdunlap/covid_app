@@ -303,7 +303,7 @@ st.altair_chart(chart, use_container_width=True)
 
 # Density Corrected Ecounters with Infectious per Week Chart
 # title is too long for graph so putting it in as markdown instead
-st.markdown('### **Estimated Number of Encounters with Someone Infectious Per Person Per Week in:**')
+st.markdown("### **Estimated Number of Encounters per Week with Someone who's Infectious in:**")
 title_for_graph = f'### **{state_1_selected} vs. {state_2_selected}**'
 st.markdown(title_for_graph)
 
