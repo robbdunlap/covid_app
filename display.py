@@ -183,10 +183,15 @@ st.header('')
 st.markdown('___')
 
 # title separating the total US data from the two state comparison graphs
-st.title('COVID-19 Data by US State')
+st.title(f'COVID-19 Data Comparison between:')
+st.title(f'{state_1_selected} and {state_2_selected}')
 st.title('')   # padding to separate page title from graphs
 
+
+###
 ### Reported vs. Estimated Cases
+###
+
 
 # Chart title and legends
 x_axis_title_new_est_inf_100k =  'Date'
@@ -222,11 +227,15 @@ st.plotly_chart(fig3, use_container_width=True)
 
 
 
-
+###
 ### estimated infections vs. test positivity rate
+###
 
+
+st.markdown('___')
 st.header('Test Positivity vs. Estimated Infections')
 st.markdown(positivity_vs_inf_explan)
+st.header('')
 st.header('')
 
 # graph title and labels for State 1
@@ -279,10 +288,13 @@ new = alt.layer(cases, positivity).resolve_scale(y='independent').configure_axis
 
 st.altair_chart(new, use_container_width=True)
 
-
+###
 ### Weekly Exposures State1 vs. State2
+###
+
 
 st.markdown('___')
+st.header('Calculating Estimated Exposures per Week')
 st.markdown(est_exposures_calc_explanation)
 st.header('')
 
