@@ -59,7 +59,7 @@ with open(file_path_test_inf_enc_txt, 'r') as filetoread:
 
 
 # title the page
-st.title('Estimating COVID-19 Prevalence in the US')
+st.title('Estimating Actual COVID-19 Prevalence in the US')
 st.title('')   # padding to separate page title from graphs
 
 # streamlit selectbox for selecting which state to plot
