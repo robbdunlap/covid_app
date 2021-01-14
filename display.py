@@ -222,7 +222,9 @@ st.plotly_chart(fig3, use_container_width=True)
 
 ### estimated infections vs. test positivity rate
 
-st.header('These graphs show how well Test Positivity correlates with the estimated number new infections per week')
+st.header('Test Positivity vs. Estimated Infections')
+st.text('These graphs show how well Test Positivity correlates with the estimated number new infections per week')
+st.header('')
 
 # graph title and labels for State 1
 inf_vs_positivity_title = f'Estimated Infections vs. Test Positivity Rate for {state_1_selected}'
