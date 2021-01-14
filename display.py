@@ -37,6 +37,7 @@ file_path_HealthData = 'data/latest_date_of_test_positivity_data.txt'
 file_path_CDC = 'data/latest_date_of_excess_deaths_data.txt'
 file_path_explainer_text = 'data/est_deaths_calc_explanation.txt'
 file_path_exposure_explainer_text = 'data/explanation_of_exposure_calc.txt'
+file_path_test_pos_vs_est_inf_text = 'data/explanation_of_test_pos_vs_est_inf.txt'
 
 with open(file_path_JHU, 'r') as filetoread:
     latest_date_of_JHU_data = filetoread.read()
@@ -50,6 +51,8 @@ with open(file_path_explainer_text, 'r') as filetoread:
     est_deaths_calc_explanation = filetoread.read()
 with open(file_path_exposure_explainer_text, 'r') as filetoread:
     est_exposures_calc_explanation = filetoread.read()
+with open(file_path_test_pos_vs_est_inf_text, 'r') as filetoread:
+    positivity_vs_inf_explan = filetoread.read()
 
 
 # title the page
@@ -223,7 +226,7 @@ st.plotly_chart(fig3, use_container_width=True)
 ### estimated infections vs. test positivity rate
 
 st.header('Test Positivity vs. Estimated Infections')
-st.text('These graphs show how well Test Positivity correlates with the estimated number new infections per week')
+st.markdown(positivity_vs_inf_explan)
 st.header('')
 
 # graph title and labels for State 1
