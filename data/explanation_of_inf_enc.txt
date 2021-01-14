@@ -1,0 +1,1 @@
+The estimate of the number of times that a person comes into contact with an infected individual per week is calculated from the number of exposure events per week multiplied by the probability that any individual is infectious. 

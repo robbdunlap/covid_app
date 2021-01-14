@@ -38,6 +38,7 @@ file_path_CDC = 'data/latest_date_of_excess_deaths_data.txt'
 file_path_explainer_text = 'data/est_deaths_calc_explanation.txt'
 file_path_exposure_explainer_text = 'data/explanation_of_exposure_calc.txt'
 file_path_test_pos_vs_est_inf_text = 'data/explanation_of_test_pos_vs_est_inf.txt'
+file_path_test_inf_enc_txt = 'data/explanation_of_inf_enc.txt'
 
 with open(file_path_JHU, 'r') as filetoread:
     latest_date_of_JHU_data = filetoread.read()
@@ -53,6 +54,8 @@ with open(file_path_exposure_explainer_text, 'r') as filetoread:
     est_exposures_calc_explanation = filetoread.read()
 with open(file_path_test_pos_vs_est_inf_text, 'r') as filetoread:
     positivity_vs_inf_explan = filetoread.read()
+with open(file_path_test_inf_enc_txt, 'r') as filetoread:
+    inf_encounters_explan = filetoread.read()
 
 
 # title the page
@@ -317,6 +320,17 @@ chart = alt.Chart(df_corr_exposure_data_sel_states_melt).mark_line().encode(
     color='state',
 ).properties(title=f'Population Density Corrected Potential Exposures per Week in {state_1_selected} vs. {state_2_selected}')
 st.altair_chart(chart, use_container_width=True)
+
+
+###
+### Infectious Encounters State1 vs. State2
+###
+
+
+st.markdown('___')
+st.header('Calculating Estimated Infectious Encounters per Week')
+st.markdown(inf_encounters_explan)
+st.header('')
 
 
 
