@@ -72,7 +72,7 @@ for i in range(1,4):     # padding
 st.sidebar.title('Data Sources and Currency')
 st.sidebar.markdown('[Reported COVID infections and deaths] \
                     (https://github.com/CSSEGISandData/COVID-19) \
-                     is from JHU dataset as of:')
+                     are from the JHU dataset as of:')
 st.sidebar.markdown(f'**{latest_date_of_JHU_data}**')
 
 st.sidebar.markdown('[Test positivity data] \
@@ -221,6 +221,8 @@ st.plotly_chart(fig3, use_container_width=True)
 
 
 ### estimated infections vs. test positivity rate
+
+st.header('These graphs show how well Test Positivity correlates with the estimated number new infections per week')
 
 # graph title and labels for State 1
 inf_vs_positivity_title = f'Estimated Infections vs. Test Positivity Rate for {state_1_selected}'
