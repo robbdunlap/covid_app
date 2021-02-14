@@ -758,7 +758,8 @@ weekly_est_cases_deaths['enc_w_inf'] = weekly_est_cases_deaths['density_cor_expo
 # https://healthdata.gov/dataset/covid-19-diagnostic-laboratory-testing-pcr-testing-time-series/resource/fe3c12ae-bdba-49eb#{}
 
 
-test_positivity_df = pd.read_csv('data/covid_testing_data_filecovid-19_diagnostic_lab_testing.csv')
+test_positivity_df = pd.read_csv('data/covid_testing_data_filecovid-19_diagnostic_lab_testing.csv', parse_dates=['date'])  
+# added parse_dates for when doing manual download of data instead of using data_pll.py (caused by problem with HealthData.gov API)
 latest_date_of_test_positivity_data = test_positivity_df['date'].max()
 
 # side quest - save latest date of Test Positivity data to file for use by the display module
