@@ -1,0 +1,68 @@
+{
+    "help": "Return the metadata of a dataset (package) and its resources. :param id: the id or name of the dataset :type id: string",
+    "success": true,
+    "result": [
+      {
+        "id": "c13c00e3-f3d0-4d49-8c43-bf600a6c0a0d",
+        "name": "covid-19-diagnostic-laboratory-testing-pcr-testing-time-series",
+        "title": "COVID-19 Diagnostic Laboratory Testing (PCR Testing) Time Series",
+        "author": "U.S. Department of Health &amp; Human Services",
+        "maintainer": "HealthData.gov",
+        "maintainer_email": "HealthData@hhs.gov",
+        "license_title": "https://opendatacommons.org/licenses/by/1.0/",
+        "notes": "<p>This time series dataset includes viral COVID-19 laboratory test [Polymerase chain reaction (PCR)] results from over 1,000 U.S. laboratories and testing locations including commercial and reference laboratories, public health laboratories, hospital laboratories, and other testing locations. Data are reported to state and jurisdictional health departments in accordance with applicable state or local law and in accordance with the Coronavirus Aid, Relief, and Economic Security (CARES) Act (<a href=\"https://www.hhs.gov/sites/default/files/covid-19-laboratory-data-reporting-guidance.pdf\">CARES Act Section 18115</a>).</p>\n<p>Data are <strong>provisional and subject to change</strong>.</p>\n<p>Data presented here is representative of diagnostic specimens being tested - not individual people - and excludes serology tests where possible. Data presented might not represent the most current counts for the most recent 3 days due to the time it takes to report testing information. The data may also not include results from all potential testing sites within the jurisdiction (e.g., non-laboratory or point of care test sites) and therefore reflect the majority, but not all, of COVID-19 testing being conducted in the United States.</p>\n<p><strong>Sources:</strong> CDC COVID-19 Electronic Laboratory Reporting (CELR), Commercial Laboratories, State Public Health Labs, In-House Hospital Labs</p>\n<p>Data for each state is sourced from either data submitted directly by the state health department via COVID-19 electronic laboratory reporting (CELR), or a combination of commercial labs, public health labs, and in-house hospital labs. Data is taken from CELR for states that either submit line level data or submit aggregate counts which do not include serology tests.</p>\n<p><a href=\"https://healthdata.gov/covid-19-diagnostic-laboratory-testing-pcr-testing-time-series-data-dictionary\">COVID-19 Diagnostic Laboratory Testing (PCR Testing) Time Series Data Dictionary</a></p>\n",
+        "url": "https://healthdata.gov/dataset/covid-19-diagnostic-laboratory-testing-pcr-testing-time-series",
+        "state": "Active",
+        "log_message": "Update to resource COVID-19 Diagnostic Laboratory Testing (PCR Testing) Time Series",
+        "private": true,
+        "revision_timestamp": "Sat, 02/13/2021 - 10:23",
+        "metadata_created": "Tue, 07/21/2020 - 10:56",
+        "metadata_modified": "Sat, 02/13/2021 - 10:23",
+        "creator_user_id": "4be8b03b-ca18-4c6c-92fe-93fb680f6983",
+        "type": "Dataset",
+        "resources": [
+          {
+            "id": "fe3c12ae-bdba-49eb-a9fa-5ab44a95b0ae",
+            "revision_id": "",
+            "url": "https://healthdata.gov/sites/default/files/covid-19_diagnostic_lab_testing_20210212_2204.csv",
+            "description": "<p><strong>Updated: February 13, 2021 10:23 AM</strong></p>\n<p>Note: For weekend reporting, some states choose not to submit data on the weekends. Thus, some state numbers may remain the same over Saturday and Sunday.</p>\n",
+            "format": "csv",
+            "state": "Active",
+            "revision_timestamp": "Sat, 02/13/2021 - 10:23",
+            "name": "COVID-19 Diagnostic Laboratory Testing (PCR Testing) Time Series",
+            "mimetype": "text/csv",
+            "size": "2.99 MB",
+            "created": "Tue, 07/21/2020 - 10:58",
+            "resource_group_id": "",
+            "last_modified": "Date changed  Sat, 02/13/2021 - 10:23"
+          }
+        ],
+        "tags": [
+          {
+            "id": "13d53ce2-786a-4476-9249-1d46d824380f",
+            "vocabulary_id": "6",
+            "name": "covid"
+          },
+          {
+            "id": "2e0c62d6-b6b7-429e-bec8-b5609556747e",
+            "vocabulary_id": "6",
+            "name": "covid-19"
+          },
+          {
+            "id": "1d4d6b87-0857-426a-b80e-2062f776c6ca",
+            "vocabulary_id": "6",
+            "name": "covid19"
+          }
+        ],
+        "groups": [
+          {
+            "description": "<p>The United States Department of Health and Human Services (HHS), also known as the Health Department, is a cabinet-level department of the U.S. federal government with the goal of protecting the health of all Americans and providing essential human services. The official HHS motto is \"Improving the health, safety, and well-being of America.\"</p>\n",
+            "id": "af7749f7-beeb-453f-97e7-c958adeb40dc",
+            "image_display_url": "https://healthdata.gov/sites/default/files/US-DeptOfHHS-Seal1_0.jpg",
+            "title": "Department of Health & Human Services",
+            "name": "agencies/department-health-human-services"
+          }
+        ]
+      }
+    ]
+  }
