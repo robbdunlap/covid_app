@@ -511,7 +511,7 @@ mobility_data['date'] = pd.to_datetime(mobility_data['date'])
 # there are values that are "US" but don't have a sub_region_1 - they're probably all US - drop these
 mobility_data.dropna(subset=['sub_region_1'], inplace=True)
 
-mob_data_for_plotting = mobility_data.iloc[:,0:8]
+mob_data_for_plotting = mobility_data.iloc[:,0:9]
 
 mob_data_for_plotting.rename(columns={'retail_and_recreation_percent_change_from_baseline':'retail_pcfb',
                      'grocery_and_pharmacy_percent_change_from_baseline':'groc_pcfb',
