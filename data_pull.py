@@ -79,6 +79,10 @@ deaths.to_csv('data/jhu_deaths_daily.csv',index=False)
 # covid_testing_data = pd.read_csv(covid_testing_data_url, error_bad_lines=False)
 # covid_testing_data.to_csv('data/covid_testing_data_filecovid-19_diagnostic_lab_testing.csv',index=False)
 
+# new method to get covid testing data using the Healthdata.gov API (much easier)
+covid_testing_data_url = "https://healthdata.gov/resource/j8mb-icvb.json"
+covid_testing_data = pd.read_json(covid_testing_data_url)
+covid_testing_data.to_csv('data/covid_testing_data_filecovid-19_diagnostic_lab_testing.csv',index=False)
 
 
 # This is what I was using before learning how to use the healthdata.gov/data.json API
@@ -86,27 +90,30 @@ deaths.to_csv('data/jhu_deaths_daily.csv',index=False)
 # The CSV download link on the page uses the report date as part of the URL so it changes each day.
 # So, I used BeautifulSoup to extract the CSV download link to then read it into a dataframe.
 
-print("Downloading CDC Daily Testing Data")
-covid_testing_page_url = 'https://healthdata.gov/dataset/covid-19-diagnostic-laboratory-testing-pcr-testing-time-series'
-covid_testing_page_data = requests.get(covid_testing_page_url).text
-soup = BeautifulSoup(covid_testing_page_data, 'html.parser')
+# 2021 03 21 - the link no longer works - they've redone the site. I'm going to try out using
+# the new API link and see if that works (above)
 
-soup_link_list = []
-for link in soup.find_all('a'):
-    soup_link_list.append(link.get('href'))
+# print("Downloading CDC Daily Testing Data")
+# covid_testing_page_url = 'https://healthdata.gov/dataset/covid-19-diagnostic-laboratory-testing-pcr-testing-time-series'
+# covid_testing_page_data = requests.get(covid_testing_page_url).text
+# soup = BeautifulSoup(covid_testing_page_data, 'html.parser')
 
-for link in soup_link_list:
-    if link == None:
-        pass
-    else:
-        if link[:74] == 'https://healthdata.gov/sites/default/files/covid-19_diagnostic_lab_testing':
-            covid_test_data_url = link
-            break
+# soup_link_list = []
+# for link in soup.find_all('a'):
+#     soup_link_list.append(link.get('href'))
 
-covid_testing_data_filename = covid_test_data_url[43:]
-covid_testing_data = pd.read_csv(covid_test_data_url, error_bad_lines=False)
-covid_testing_data.to_csv(f'data/covid_testing_data_backup/{covid_testing_data_filename}',index=False)
-covid_testing_data.to_csv('data/covid_testing_data_filecovid-19_diagnostic_lab_testing.csv',index=False)
+# for link in soup_link_list:
+#     if link == None:
+#         pass
+#     else:
+#         if link[:74] == 'https://healthdata.gov/sites/default/files/covid-19_diagnostic_lab_testing':
+#             covid_test_data_url = link
+#             break
+
+# covid_testing_data_filename = covid_test_data_url[43:]
+# covid_testing_data = pd.read_csv(covid_test_data_url, error_bad_lines=False)
+# covid_testing_data.to_csv(f'data/covid_testing_data_backup/{covid_testing_data_filename}',index=False)
+# covid_testing_data.to_csv('data/covid_testing_data_filecovid-19_diagnostic_lab_testing.csv',index=False)
     
   
 print("That's it, all done!")  
